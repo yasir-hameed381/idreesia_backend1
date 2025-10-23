@@ -136,12 +136,38 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING(100),
         allowNull: true,
       },
+      api_token: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      has_affidavit_form: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      affidavit_form_file: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      created_by: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+      },
       updated_at: {
         type: DataTypes.DATE,
+        allowNull: true,
+      },
+      updated_by: {
+        type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
       },
     },

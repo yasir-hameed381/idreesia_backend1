@@ -5,6 +5,7 @@ const UserAdmin = require("./user-admin")(sequelize);
 const Roles = require("./roles")(sequelize);
 const Permissions = require("./permission")(sequelize);
 const RoleHasPermissions = require("./roleHasPermissions")(sequelize);
+const ModelHasRoles = require("./modelHasRoles")(sequelize);
 const Auth = require("./auth")(sequelize);
 
 // Create models object
@@ -13,6 +14,7 @@ const models = {
   Roles,
   Permissions,
   RoleHasPermissions,
+  ModelHasRoles,
   Auth,
 };
 
