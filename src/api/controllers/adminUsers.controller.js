@@ -63,7 +63,8 @@ exports.createAdminUser = async (req, res, next) => {
       is_active,
       affidavit_form_file,
       has_affidavit_form,
-      region_id
+      region_id,
+      role_id
     } = req.body;
 
     const result = await adminUsersService.createAdminUser({
@@ -90,7 +91,8 @@ exports.createAdminUser = async (req, res, next) => {
       is_active,
       affidavit_form_file,
       has_affidavit_form,
-      region_id
+      region_id,
+      role_id
     });
     return res.status(201).json({
       success: true,
@@ -130,7 +132,8 @@ exports.updateAdminUser = async (req, res, next) => {
       is_active,
       affidavit_form_file,
       has_affidavit_form,
-      region_id
+      region_id,
+      role_id
     } = req.body;
 
     if (!id) {
@@ -165,7 +168,8 @@ exports.updateAdminUser = async (req, res, next) => {
       is_active,
       affidavit_form_file,
       has_affidavit_form,
-      region_id
+      region_id,
+      role_id
     });
 
     console.log("result =========", result.success);
