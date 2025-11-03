@@ -104,6 +104,9 @@ exports.login = async (email, password) => {
     is_mehfil_admin: user.is_mehfil_admin || false,
     is_zone_admin: user.is_zone_admin || false,
     is_region_admin: user.is_region_admin || false,
+    zone_id: user.zone_id || null,
+    region_id: user.region_id || null,
+    mehfil_directory_id: user.mehfil_directory_id || null,
     role: userRole
       ? {
         id: userRole.id,
@@ -228,6 +231,9 @@ exports.getUserWithPermissions = async (userId) => {
       is_mehfil_admin: user.is_mehfil_admin || false,
       is_zone_admin: user.is_zone_admin || false,
       is_region_admin: user.is_region_admin || false,
+      zone_id: user.zone_id || null,
+      region_id: user.region_id || null,
+      mehfil_directory_id: user.mehfil_directory_id || null,
       role: userRole
         ? {
           id: userRole.id,
