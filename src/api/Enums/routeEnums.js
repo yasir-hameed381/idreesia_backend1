@@ -28,6 +28,7 @@ const route = Object.freeze({
   MEHFIL_COORDINATOR: "/mehfil-coordinators",
   DUTY_TYPE: "/duty-types-data",
   DUTY_ROSTER: "/duty-rosters-data",
+  DASHBOARD: "/dashboard",
 });
 
 module.exports = { route };

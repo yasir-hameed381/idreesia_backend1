@@ -10,7 +10,7 @@ module.exports = (sequelize) => {
         primaryKey: true,
       },
       zone_id: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
       },
       region_id: {
@@ -32,7 +32,7 @@ module.exports = (sequelize) => {
       },
       father_name: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: true,
       },
       father_name_ur: {
         type: DataTypes.STRING(255),
@@ -47,15 +47,15 @@ module.exports = (sequelize) => {
         allowNull: true,
       },
       address: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
       birth_year: {
-        type: DataTypes.STRING(4), // Sequelize does not support YEAR type directly
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
       ehad_year: {
-        type: DataTypes.STRING(4),
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
       mehfil_directory_id: {

@@ -29,6 +29,7 @@ const newEhadFollowUpRoute = require("./newEhadFollowUp.route");
 const mehfilCoordinatorRoute = require("./mehfilCoordinator.route");
 const dutyTypeRoute = require("./dutyType.route");
 const dutyRosterRoute = require("./dutyRoster.route");
+const dashboardRoute = require("./dashboard.route");
 const { route } = require("../../Enums/routeEnums");
 
 const router = express.Router();
@@ -72,6 +73,7 @@ router.use(route.NEW_EHAD_FOLLOW_UP, newEhadFollowUpRoute);
 router.use(route.MEHFIL_COORDINATOR, mehfilCoordinatorRoute);
 router.use(route.DUTY_TYPE, dutyTypeRoute);
 router.use(route.DUTY_ROSTER, dutyRosterRoute);
+router.use(route.DASHBOARD, dashboardRoute);
 
 // Health check route
 router.get("/healthcheck", (req, res) => {

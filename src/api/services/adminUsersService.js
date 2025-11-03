@@ -2,10 +2,24 @@ const { Op, where } = require("sequelize");
 const logger = require("../../config/logger");
 const { sequelize: db } = require("../../config/database");
 const adminUsersModel = require("../models/user-admin")(db);
+const modelHasRolesModel = require("../models/modelHasRoles")(db);
+const rolesModel = require("../models/roles")(db);
 const { paginate, constructPagination } = require("./utilityServices");
 const { SearchFields } = require("../Enums/searchEnums");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = 10;
+
+// Set up associations
+adminUsersModel.belongsToMany(rolesModel, {
+  through: {
+    model: modelHasRolesModel,
+    unique: false,
+  },
+  foreignKey: "model_id",
+  otherKey: "role_id",
+  as: "roles",
+  constraints: false,
+});
 
 exports.getuserAdmins = async ({
   page = 1,
@@ -45,6 +59,15 @@ exports.getuserAdmins = async ({
       where,
       offset,
       limit,
+      include: [
+        {
+          model: rolesModel,
+          as: "roles",
+          attributes: ["id", "name", "guard_name"],
+          through: { attributes: [] }, // Hide junction table fields
+          required: false,
+        },
+      ],
     });
 
     console.log("rowsss", data);
@@ -79,7 +102,17 @@ exports.getAdminUserById = async (id) => {
         message: "user not found",
       };
     }
-    const adminUser = await adminUsersModel.findByPk(id);
+    const adminUser = await adminUsersModel.findByPk(id, {
+      include: [
+        {
+          model: rolesModel,
+          as: "roles",
+          attributes: ["id", "name", "guard_name"],
+          through: { attributes: [] }, // Hide junction table fields
+          required: false,
+        },
+      ],
+    });
     if (!adminUser) {
       return {
         success: false,
@@ -120,8 +153,10 @@ exports.createAdminUser = async ({
   is_active,
   affidavit_form_file,
   has_affidavit_form,
-  region_id
+  region_id,
+  role_id
 }) => {
+  const transaction = await db.transaction();
   try {
     console.log("🔍 Creating admin user with payload:", {
       zone_id,
@@ -147,7 +182,8 @@ exports.createAdminUser = async ({
       is_active,
       affidavit_form_file,
       has_affidavit_form,
-      region_id
+      region_id,
+      role_id
     });
 
     if (!password) {
@@ -185,10 +221,26 @@ exports.createAdminUser = async ({
 
     console.log("📤 Final payload for database:", adminUserPayload);
 
-    const result = await adminUsersModel.create(adminUserPayload);
+    const result = await adminUsersModel.create(adminUserPayload, { transaction });
     console.log("✅ Admin user created successfully:", result.id);
+
+    // Assign role to user in model_has_roles table
+    if (role_id) {
+      await modelHasRolesModel.create(
+        {
+          role_id: role_id,
+          model_type: "users",
+          model_id: result.id,
+        },
+        { transaction }
+      );
+      console.log(`✅ Role ${role_id} assigned to user ${result.id} in model_has_roles`);
+    }
+
+    await transaction.commit();
     return result;
   } catch (error) {
+    await transaction.rollback();
     console.error("❌ Error creating admin user:", error.message);
     console.error("❌ Error details:", error);
 
@@ -237,8 +289,10 @@ exports.updateAdminUser = async ({
   is_active,
   affidavit_form_file,
   has_affidavit_form,
-  region_id
+  region_id,
+  role_id
 }) => {
+  const transaction = await db.transaction();
   try {
     console.log("🔍 Updating admin user with ID:", id);
     console.log("📝 Update payload:", {
@@ -265,11 +319,13 @@ exports.updateAdminUser = async ({
       is_active,
       affidavit_form_file,
       has_affidavit_form,
-      region_id
+      region_id,
+      role_id
     });
 
     const adminUser = await adminUsersModel.findByPk(id);
     if (!adminUser) {
+      await transaction.rollback();
       return {
         success: false,
         message: "admin user not found",
@@ -312,14 +368,42 @@ exports.updateAdminUser = async ({
 
     await adminUsersModel.update(adminUserPayload, {
       where: { id: id },
+      transaction,
     });
 
+    // Update role assignment in model_has_roles table
+    if (role_id !== undefined) {
+      // Delete existing role assignments for this user
+      await modelHasRolesModel.destroy({
+        where: {
+          model_id: id,
+          model_type: "users",
+        },
+        transaction,
+      });
+
+      // Assign new role if provided
+      if (role_id) {
+        await modelHasRolesModel.create(
+          {
+            role_id: role_id,
+            model_type: "users",
+            model_id: id,
+          },
+          { transaction }
+        );
+        console.log(`✅ Role ${role_id} assigned to user ${id} in model_has_roles`);
+      }
+    }
+
+    await transaction.commit();
     console.log("✅ Admin user updated successfully");
     return {
       success: true,
       message: "admin user updated successfully.",
     };
   } catch (error) {
+    await transaction.rollback();
     console.error("❌ Error updating admin user:", error.message);
     console.error("❌ Error details:", error);
 
@@ -344,23 +428,37 @@ exports.updateAdminUser = async ({
 };
 
 exports.deleteAdminUser = async (id) => {
+  const transaction = await db.transaction();
   try {
     const adminUser = await adminUsersModel.findByPk(id);
 
     if (!adminUser) {
+      await transaction.rollback();
       return {
         success: false,
         message: "admin user not found",
       };
     }
 
-    await adminUser.destroy();
+    // Delete role assignments from model_has_roles
+    await modelHasRolesModel.destroy({
+      where: {
+        model_id: id,
+        model_type: "users",
+      },
+      transaction,
+    });
 
+    // Delete the user
+    await adminUser.destroy({ transaction });
+
+    await transaction.commit();
     return {
       success: true,
       message: "admin user deleted successfully.",
     };
   } catch (error) {
+    await transaction.rollback();
     logger.error("error deleting admin user", error.message);
     throw new Error("failed to delete admin user", error.message);
   }
