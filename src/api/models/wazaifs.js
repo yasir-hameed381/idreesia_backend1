@@ -25,8 +25,35 @@ const wazaifsSchema = sequelize.define('wazaifs', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  description_en: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   images: {
     type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  category: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  is_published: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 1,
+  },
+  is_for_karkun: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  is_for_ehad_karkun: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  wazaif_number: {
+    type: DataTypes.STRING(255),
     allowNull: true,
   },
   created_at: {

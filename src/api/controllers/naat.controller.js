@@ -143,6 +143,33 @@ exports.updateNaatShareef = async (req, res, next) => {
   }
 };
 
+exports.getNaatShareefById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Naat Shareef ID is required",
+      });
+    }
+
+    const result = await naatService.getNaatShareefById(id);
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error fetching Naat Shareef by ID: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 exports.removeNaatShareef = async (req, res, next) => {
   try {
     const { id } = req.params;

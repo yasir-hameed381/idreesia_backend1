@@ -183,6 +183,33 @@ exports.updateNaatShareef = async ({
   }
 };
 
+exports.getNaatShareefById = async (id) => {
+  try {
+    if (!id || isNaN(id)) {
+      return {
+        success: false,
+        message: "Invalid Naat Shareef ID provided",
+      };
+    }
+
+    const naatShareef = await naatModel.findByPk(id);
+    if (!naatShareef) {
+      return {
+        success: false,
+        message: "Naat Shareef not found",
+      };
+    }
+
+    return {
+      success: true,
+      data: naatShareef,
+    };
+  } catch (error) {
+    logger.error("Error fetching Naat Shareef by ID:", error.message);
+    throw new Error(`Failed to fetch Naat Shareef: ${error.message}`);
+  }
+};
+
 exports.removeNaatShareef = async (naatShareef_id) => {
   try {
     // Check if the mehfil exists
@@ -210,6 +237,6 @@ exports.removeNaatShareef = async (naatShareef_id) => {
     };
   } catch (error) {
     logger.error("Error deleting Naat Shareef:", error);
-    return next(error);
+    throw error;
   }
 };

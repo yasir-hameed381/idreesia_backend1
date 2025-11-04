@@ -10,7 +10,7 @@ const roleHasPermissionsModel = require('../models/roleHasPermissions')(db);
 const modelHasRolesModel = require('../models/modelHasRoles')(db);
 const { jwtSecret } = require('../../config/vars');
 const { ErrorMessages } = require('../Enums/errorMessages');
-
+ 
 // Set up associations manually
 // Step 1: AdminUser -> model_has_roles (user.id = model_has_roles.model_id)
 // Using constraints: false for polymorphic relationship
@@ -24,7 +24,7 @@ adminUserModel.belongsToMany(rolesModel, {
   as: 'roles',
   constraints: false,
 });
-
+ 
 // Step 2: Roles -> role_has_permissions -> Permissions
 rolesModel.belongsToMany(permissionsModel, {
   through: roleHasPermissionsModel,
@@ -32,14 +32,14 @@ rolesModel.belongsToMany(permissionsModel, {
   otherKey: 'permission_id',
   as: 'permissions',
 });
-
+ 
 permissionsModel.belongsToMany(rolesModel, {
   through: roleHasPermissionsModel,
   foreignKey: 'permission_id',
   otherKey: 'role_id',
   as: 'roles',
 });
-
+ 
 exports.login = async (email, password) => {
   // Step 1: SELECT * FROM users where email = 'email@example.com'
   let user = await adminUserModel.findOne({
@@ -75,27 +75,27 @@ exports.login = async (email, password) => {
   if (!user) {
     user = await userModel.findOne({ where: { email } });
   }
-
+ 
   if (!user) {
     const error = new Error(ErrorMessages.NOT_FOUND);
     error.statusCode = 404;
     throw error;
   }
-
+ 
   const isMatch = await bcrypt.compare(password, user.password);
-
+ 
   if (!isMatch) {
     const error = new Error(ErrorMessages.INVALID_EMAIL_PASSWORD);
     error.statusCode = 400;
     throw error;
   }
-
+ 
   const expirationInSeconds = 24 * 60 * 60; // 24 hours in seconds
-
+ 
   // Prepare user data with roles and permissions
   // Get first role (or you can return all roles if needed)
   const userRole = user.roles && user.roles.length > 0 ? user.roles[0] : null;
-
+ 
   const userData = {
     id: user.id,
     name: user.name,
@@ -149,42 +149,42 @@ exports.login = async (email, password) => {
       expiresIn: expirationInSeconds,
     },
   );
-
+ 
   return {
     user: userData,
     token,
     message: ErrorMessages.SUCCESS_LOGIN,
   };
 };
-
+ 
 exports.register = async (email, password, name) => {
   // Check if the email already exists
   const existingUser = await userModel.findOne({ where: { email } });
-
+ 
   if (existingUser) {
     const error = new Error(ErrorMessages.EMAIL_EXIST);
     error.statusCode = 400;
     throw error;
   }
-
+ 
   // Hash the password
   const hashedPassword = await bcrypt.hash(password, 9);
-
+ 
   // Create the new user
   const newUser = await userModel.create({
     email,
     password: hashedPassword,
     name,
   });
-
+ 
   logger.info(ErrorMessages.USER_REGISTER_SUCCESS, { email, name });
-
+ 
   return {
     user: newUser,
     message: ErrorMessages.REGISTRATION_SUCCESS,
   };
 };
-
+ 
 // Get user with roles and permissions
 exports.getUserWithPermissions = async (userId) => {
   try {
@@ -215,14 +215,14 @@ exports.getUserWithPermissions = async (userId) => {
       ],
       logging: console.log,
     });
-
+ 
     if (!user) {
       return null;
     }
-
+ 
     // Get first role (or return all roles)
     const userRole = user.roles && user.roles.length > 0 ? user.roles[0] : null;
-
+ 
     return {
       id: user.id,
       name: user.name,
