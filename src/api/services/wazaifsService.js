@@ -22,6 +22,7 @@ exports.getWazaifs = async ({
       SearchFields.TITLE_EN,
       SearchFields.TITLE_UR,
       SearchFields.DESCRIPTION,
+      'description_en', // Add description_en field
       SearchFields.SLUG,
     ];
 
@@ -39,15 +40,27 @@ exports.getWazaifs = async ({
     }
 
     // Add a category filter if a category is specified
-    if (category) {
-      where.category_id = category;
+    // Support both 'category' (enum value) and 'category_id' (legacy)
+    if (category && category !== 'all') {
+      // Check if category is a valid enum value (bunyadi, notice_board_taleem, parhaiyan, wazaif)
+      const validCategories = ['bunyadi', 'notice_board_taleem', 'parhaiyan', 'wazaif'];
+      if (validCategories.includes(category.toLowerCase())) {
+        where.category = category.toLowerCase();
+      } else {
+        // Fallback to category_id for backward compatibility
+        where.category_id = category;
+      }
     }
+
+    // Add is_published filter - only show published wazaifs
+    where.is_published = 1;
 
     // Fetch data from the Wazaifs model with the specified conditions and pagination
     const { count, rows: data } = await wazaifsModel.findAndCountAll({
       where,
       offset,
       limit,
+      order: [['created_at', 'DESC']], // Default ordering
     });
 
     // Construct pagination links and metadata for the response
