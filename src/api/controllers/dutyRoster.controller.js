@@ -1,19 +1,19 @@
 const logger = require("../../config/logger");
 const dutyRosterService = require("../services/dutyRosterService");
+const dutyRosterAssignmentService = require("../services/dutyRosterAssignmentService");
 
 /**
- * Get all duty rosters with pagination
+ * Get all duty rosters with assignments (matching Laravel implementation)
  */
 exports.getAllDutyRosters = async (req, res, next) => {
   try {
-    const { page, size, search, zoneId, mehfilDirectoryId } = req.query;
+    const { zoneId, mehfilDirectoryId, userTypeFilter, search } = req.query;
 
     const result = await dutyRosterService.getAllDutyRosters({
-      page,
-      size,
-      search,
       zoneId,
       mehfilDirectoryId,
+      userTypeFilter: userTypeFilter || "karkun",
+      search: search || "",
     });
 
     return res.json(result);
@@ -68,23 +68,11 @@ exports.getDutyRosterById = async (req, res, next) => {
 };
 
 /**
- * Create a new duty roster
+ * Create a new duty roster (add karkun to roster)
  */
 exports.createDutyRoster = async (req, res, next) => {
   try {
-    const {
-      user_id,
-      zone_id,
-      mehfil_directory_id,
-      duty_type_id_monday,
-      duty_type_id_tuesday,
-      duty_type_id_wednesday,
-      duty_type_id_thursday,
-      duty_type_id_friday,
-      duty_type_id_saturday,
-      duty_type_id_sunday,
-      created_by,
-    } = req.body;
+    const { user_id, zone_id, mehfil_directory_id, created_by } = req.body;
 
     if (!user_id) {
       return res.status(400).json({
@@ -97,23 +85,28 @@ exports.createDutyRoster = async (req, res, next) => {
       user_id,
       zone_id,
       mehfil_directory_id,
-      duty_type_id_monday,
-      duty_type_id_tuesday,
-      duty_type_id_wednesday,
-      duty_type_id_thursday,
-      duty_type_id_friday,
-      duty_type_id_saturday,
-      duty_type_id_sunday,
       created_by,
     });
 
     return res.status(201).json({
       success: true,
-      message: "Duty roster created successfully",
+      message: "Karkun added to roster successfully",
       data: dutyRoster,
     });
   } catch (error) {
     logger.error("Error creating duty roster:", error);
+    if (error.message.includes("already in the roster")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    if (error.message.includes("select a mehfil")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
     return next(error);
   }
 };
@@ -124,19 +117,7 @@ exports.createDutyRoster = async (req, res, next) => {
 exports.updateDutyRoster = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const {
-      user_id,
-      zone_id,
-      mehfil_directory_id,
-      duty_type_id_monday,
-      duty_type_id_tuesday,
-      duty_type_id_wednesday,
-      duty_type_id_thursday,
-      duty_type_id_friday,
-      duty_type_id_saturday,
-      duty_type_id_sunday,
-      updated_by,
-    } = req.body;
+    const { user_id, zone_id, mehfil_directory_id, updated_by } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -149,13 +130,6 @@ exports.updateDutyRoster = async (req, res, next) => {
       user_id,
       zone_id,
       mehfil_directory_id,
-      duty_type_id_monday,
-      duty_type_id_tuesday,
-      duty_type_id_wednesday,
-      duty_type_id_thursday,
-      duty_type_id_friday,
-      duty_type_id_saturday,
-      duty_type_id_sunday,
       updated_by,
     });
 
@@ -166,6 +140,72 @@ exports.updateDutyRoster = async (req, res, next) => {
     });
   } catch (error) {
     logger.error("Error updating duty roster:", error);
+    return next(error);
+  }
+};
+
+/**
+ * Add duty assignment to roster
+ */
+exports.addDuty = async (req, res, next) => {
+  try {
+    const { mehfilDirectoryId, rosterId, day, dutyTypeId } = req.body;
+
+    if (!rosterId || !day || !dutyTypeId) {
+      return res.status(400).json({
+        success: false,
+        message: "rosterId, day, and dutyTypeId are required",
+      });
+    }
+
+    const assignment = await dutyRosterAssignmentService.createAssignment({
+      duty_roster_id: rosterId,
+      duty_type_id: dutyTypeId,
+      day,
+    });
+
+    return res.json({
+      success: true,
+      message: "Duty added successfully",
+      data: assignment,
+    });
+  } catch (error) {
+    logger.error("Error adding duty:", error);
+    if (
+      error.message.includes("already assigned") ||
+      error.message.includes("coordinator")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    return next(error);
+  }
+};
+
+/**
+ * Remove duty assignment from roster
+ */
+exports.removeDuty = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Assignment ID is required",
+      });
+    }
+
+    const result = await dutyRosterAssignmentService.deleteAssignment(id);
+    return res.json({
+      success: true,
+      message: "Duty removed successfully",
+      data: result,
+    });
+  } catch (error) {
+    logger.error("Error removing duty:", error);
     return next(error);
   }
 };

@@ -106,6 +106,15 @@ module.exports = (sequelize) => {
       as: "updater",
       onDelete: "SET NULL",
     });
+
+    // Assignment relationship
+    if (models.duty_roster_assignments) {
+      DutyRoster.hasMany(models.duty_roster_assignments, {
+        foreignKey: "duty_roster_id",
+        as: "assignments",
+        onDelete: "CASCADE",
+      });
+    }
   };
 
   return DutyRoster;

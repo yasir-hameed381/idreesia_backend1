@@ -154,10 +154,18 @@ exports.createAdminUser = async ({
   affidavit_form_file,
   has_affidavit_form,
   region_id,
-  role_id
+  role_id,
+  role_ids
 }) => {
   const transaction = await db.transaction();
   try {
+    // Support both role_id (single) and role_ids (array) for backward compatibility
+    const rolesToAssign = role_ids && Array.isArray(role_ids) && role_ids.length > 0 
+      ? role_ids 
+      : role_id 
+        ? [role_id] 
+        : [];
+
     console.log("🔍 Creating admin user with payload:", {
       zone_id,
       name,
@@ -183,7 +191,9 @@ exports.createAdminUser = async ({
       affidavit_form_file,
       has_affidavit_form,
       region_id,
-      role_id
+      role_id,
+      role_ids,
+      rolesToAssign
     });
 
     if (!password) {
@@ -224,17 +234,16 @@ exports.createAdminUser = async ({
     const result = await adminUsersModel.create(adminUserPayload, { transaction });
     console.log("✅ Admin user created successfully:", result.id);
 
-    // Assign role to user in model_has_roles table
-    if (role_id) {
-      await modelHasRolesModel.create(
-        {
-          role_id: role_id,
-          model_type: "users",
-          model_id: result.id,
-        },
-        { transaction }
-      );
-      console.log(`✅ Role ${role_id} assigned to user ${result.id} in model_has_roles`);
+    // Assign multiple roles to user in model_has_roles table (like Laravel syncRoles)
+    if (rolesToAssign.length > 0) {
+      const roleAssignments = rolesToAssign.map(roleId => ({
+        role_id: roleId,
+        model_type: "users",
+        model_id: result.id,
+      }));
+      
+      await modelHasRolesModel.bulkCreate(roleAssignments, { transaction });
+      console.log(`✅ Roles [${rolesToAssign.join(', ')}] assigned to user ${result.id} in model_has_roles`);
     }
 
     await transaction.commit();
@@ -290,10 +299,18 @@ exports.updateAdminUser = async ({
   affidavit_form_file,
   has_affidavit_form,
   region_id,
-  role_id
+  role_id,
+  role_ids
 }) => {
   const transaction = await db.transaction();
   try {
+    // Support both role_id (single) and role_ids (array) for backward compatibility
+    const rolesToAssign = role_ids !== undefined && Array.isArray(role_ids)
+      ? role_ids 
+      : role_id !== undefined 
+        ? (role_id ? [role_id] : [])
+        : undefined;
+
     console.log("🔍 Updating admin user with ID:", id);
     console.log("📝 Update payload:", {
       zone_id,
@@ -320,7 +337,9 @@ exports.updateAdminUser = async ({
       affidavit_form_file,
       has_affidavit_form,
       region_id,
-      role_id
+      role_id,
+      role_ids,
+      rolesToAssign
     });
 
     const adminUser = await adminUsersModel.findByPk(id);
@@ -371,8 +390,8 @@ exports.updateAdminUser = async ({
       transaction,
     });
 
-    // Update role assignment in model_has_roles table
-    if (role_id !== undefined) {
+    // Update role assignment in model_has_roles table (sync roles like Laravel)
+    if (rolesToAssign !== undefined) {
       // Delete existing role assignments for this user
       await modelHasRolesModel.destroy({
         where: {
@@ -382,17 +401,18 @@ exports.updateAdminUser = async ({
         transaction,
       });
 
-      // Assign new role if provided
-      if (role_id) {
-        await modelHasRolesModel.create(
-          {
-            role_id: role_id,
-            model_type: "users",
-            model_id: id,
-          },
-          { transaction }
-        );
-        console.log(`✅ Role ${role_id} assigned to user ${id} in model_has_roles`);
+      // Assign new roles if provided
+      if (rolesToAssign.length > 0) {
+        const roleAssignments = rolesToAssign.map(roleId => ({
+          role_id: roleId,
+          model_type: "users",
+          model_id: id,
+        }));
+        
+        await modelHasRolesModel.bulkCreate(roleAssignments, { transaction });
+        console.log(`✅ Roles [${rolesToAssign.join(', ')}] assigned to user ${id} in model_has_roles`);
+      } else {
+        console.log(`✅ All roles removed from user ${id}`);
       }
     }
 

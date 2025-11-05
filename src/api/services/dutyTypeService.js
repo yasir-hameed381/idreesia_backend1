@@ -120,8 +120,19 @@ exports.deleteDutyType = async (id) => {
  */
 exports.getActiveDutyTypes = async () => {
   try {
+    // Explicitly exclude is_hidden column as it doesn't exist in the database
     const dutyTypes = await dutyTypeModel.findAll({
-      where: { is_hidden: 0 },
+      attributes: [
+        "id",
+        "zone_id",
+        "name",
+        "description",
+        "is_editable",
+        "created_by",
+        "updated_by",
+        "created_at",
+        "updated_at",
+      ],
       order: [["name", "ASC"]],
     });
     return dutyTypes;

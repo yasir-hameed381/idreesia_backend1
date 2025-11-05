@@ -64,7 +64,8 @@ exports.createAdminUser = async (req, res, next) => {
       affidavit_form_file,
       has_affidavit_form,
       region_id,
-      role_id
+      role_id,
+      role_ids
     } = req.body;
 
     const result = await adminUsersService.createAdminUser({
@@ -133,7 +134,8 @@ exports.updateAdminUser = async (req, res, next) => {
       affidavit_form_file,
       has_affidavit_form,
       region_id,
-      role_id
+      role_id,
+      role_ids
     } = req.body;
 
     if (!id) {
@@ -169,7 +171,8 @@ exports.updateAdminUser = async (req, res, next) => {
       affidavit_form_file,
       has_affidavit_form,
       region_id,
-      role_id
+      role_id,
+      role_ids
     });
 
     console.log("result =========", result.success);

@@ -93,9 +93,30 @@ exports.login = async (email, password) => {
   const expirationInSeconds = 24 * 60 * 60; // 24 hours in seconds
  
   // Prepare user data with roles and permissions
-  // Get first role (or you can return all roles if needed)
-  const userRole = user.roles && user.roles.length > 0 ? user.roles[0] : null;
- 
+  // Get all roles and combine their permissions
+  const userRoles = user.roles && user.roles.length > 0 ? user.roles : [];
+  const firstRole = userRoles.length > 0 ? userRoles[0] : null;
+  
+  // Combine permissions from all roles (like Laravel)
+  const allPermissionsMap = new Map();
+  userRoles.forEach((role) => {
+    if (role.permissions && Array.isArray(role.permissions)) {
+      role.permissions.forEach((permission) => {
+        // Use permission name as key to avoid duplicates
+        if (!allPermissionsMap.has(permission.name)) {
+          allPermissionsMap.set(permission.name, {
+            id: permission.id,
+            name: permission.name,
+            guard_name: permission.guard_name,
+          });
+        }
+      });
+    }
+  });
+  
+  // Convert map to array of unique permissions
+  const combinedPermissions = Array.from(allPermissionsMap.values());
+  
   const userData = {
     id: user.id,
     name: user.name,
@@ -107,35 +128,29 @@ exports.login = async (email, password) => {
     zone_id: user.zone_id || null,
     region_id: user.region_id || null,
     mehfil_directory_id: user.mehfil_directory_id || null,
-    role: userRole
+    // Primary role (first role for backward compatibility)
+    role: firstRole
       ? {
-        id: userRole.id,
-        name: userRole.name,
-        guard_name: userRole.guard_name,
-        permissions: userRole.permissions
-          ? userRole.permissions.map((p) => ({
-            id: p.id,
-            name: p.name,
-            guard_name: p.guard_name,
-          }))
-          : [],
+        id: firstRole.id,
+        name: firstRole.name,
+        guard_name: firstRole.guard_name,
+        // Include all combined permissions from all roles
+        permissions: combinedPermissions,
       }
       : null,
-    // Optional: include all roles if user has multiple
-    allRoles: user.roles
-      ? user.roles.map((r) => ({
-        id: r.id,
-        name: r.name,
-        guard_name: r.guard_name,
-        permissions: r.permissions
-          ? r.permissions.map((p) => ({
-            id: p.id,
-            name: p.name,
-            guard_name: p.guard_name,
-          }))
-          : [],
-      }))
-      : [],
+    // Include all roles if user has multiple (for frontend to display)
+    roles: userRoles.map((r) => ({
+      id: r.id,
+      name: r.name,
+      guard_name: r.guard_name,
+      permissions: r.permissions
+        ? r.permissions.map((p) => ({
+          id: p.id,
+          name: p.name,
+          guard_name: p.guard_name,
+        }))
+        : [],
+    })),
   };
   console.log('Prepared userData for token:', userData);
   const token = jwt.sign(
@@ -220,8 +235,29 @@ exports.getUserWithPermissions = async (userId) => {
       return null;
     }
  
-    // Get first role (or return all roles)
-    const userRole = user.roles && user.roles.length > 0 ? user.roles[0] : null;
+    // Get all roles and combine their permissions
+    const userRoles = user.roles && user.roles.length > 0 ? user.roles : [];
+    const firstRole = userRoles.length > 0 ? userRoles[0] : null;
+    
+    // Combine permissions from all roles (like Laravel)
+    const allPermissionsMap = new Map();
+    userRoles.forEach((role) => {
+      if (role.permissions && Array.isArray(role.permissions)) {
+        role.permissions.forEach((permission) => {
+          // Use permission name as key to avoid duplicates
+          if (!allPermissionsMap.has(permission.name)) {
+            allPermissionsMap.set(permission.name, {
+              id: permission.id,
+              name: permission.name,
+              guard_name: permission.guard_name,
+            });
+          }
+        });
+      }
+    });
+    
+    // Convert map to array of unique permissions
+    const combinedPermissions = Array.from(allPermissionsMap.values());
  
     return {
       id: user.id,
@@ -234,35 +270,29 @@ exports.getUserWithPermissions = async (userId) => {
       zone_id: user.zone_id || null,
       region_id: user.region_id || null,
       mehfil_directory_id: user.mehfil_directory_id || null,
-      role: userRole
+      // Primary role (first role for backward compatibility)
+      role: firstRole
         ? {
-          id: userRole.id,
-          name: userRole.name,
-          guard_name: userRole.guard_name,
-          permissions: userRole.permissions
-            ? userRole.permissions.map((p) => ({
-              id: p.id,
-              name: p.name,
-              guard_name: p.guard_name,
-            }))
-            : [],
+          id: firstRole.id,
+          name: firstRole.name,
+          guard_name: firstRole.guard_name,
+          // Include all combined permissions from all roles
+          permissions: combinedPermissions,
         }
         : null,
-      // Optional: include all roles
-      allRoles: user.roles
-        ? user.roles.map((r) => ({
-          id: r.id,
-          name: r.name,
-          guard_name: r.guard_name,
-          permissions: r.permissions
-            ? r.permissions.map((p) => ({
-              id: p.id,
-              name: p.name,
-              guard_name: p.guard_name,
-            }))
-            : [],
-        }))
-        : [],
+      // Include all roles if user has multiple (for frontend to display)
+      roles: userRoles.map((r) => ({
+        id: r.id,
+        name: r.name,
+        guard_name: r.guard_name,
+        permissions: r.permissions
+          ? r.permissions.map((p) => ({
+            id: p.id,
+            name: p.name,
+            guard_name: p.guard_name,
+          }))
+          : [],
+      })),
     };
   } catch (error) {
     logger.error('Error fetching user with permissions:', error);
