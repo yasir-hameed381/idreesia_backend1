@@ -12,6 +12,7 @@ const route = Object.freeze({
   PARHAIYAN: "/parhaiyan",
   PARHAIYAN_RECITAION: "/parhaiyan-recitations",
   ZONE: "/zone",
+  REGION: "/region",
   MEHFIL_DIRECTORY: "/mehfil-directory",
   NAMAZ: "/namaz",
   EHAD_KARKUN: "/ehadKarkun",

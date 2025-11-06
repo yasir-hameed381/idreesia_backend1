@@ -13,6 +13,7 @@ const authRoutes = require("./auth.route");
 const parhaiyanRoutes = require("./parhaiyan.route");
 const parhaiyanRecitaionsRoutes = require("./parhaiyan-recitations.route");
 const zoneRoutes = require("./zones.route");
+const regionRoutes = require("./regions.route");
 const mehfilDirectoryRoutes = require("./mehfil-directories.route");
 const namazRoutes = require("./namaz.route");
 const ehadKarkunRoutes = require("./ehadKarkun.route");
@@ -52,6 +53,7 @@ router.use(route.PARHAIYAN, parhaiyanRoutes);
 router.use(route.PARHAIYAN_RECITAION, parhaiyanRecitaionsRoutes);
 
 router.use(route.ZONE, zoneRoutes);
+router.use(route.REGION, regionRoutes);
 
 router.use(route.MEHFIL_DIRECTORY, mehfilDirectoryRoutes);
 

@@ -148,24 +148,23 @@ exports.deleteParhaiyan = async (id) => {
       message: 'Parhaiyan deleted successfully.'
     };
   } catch (error) {
-    logger.error('Error deleting prhaiyan:', error);
-    return next(error);
+    logger.error('Error deleting Parhaiyan:', error);
+    throw error;
   }
 };
 
 exports.activeParhaiyan = async () => {
   try {
-
     const activeParhaiyan = await parhaiyanModel.findAll({
       where: {
         is_active: 1,
       },
     });
 
-    return activeParhaiyan
+    return activeParhaiyan;
   } catch (error) {
-    logger.error('Error deleting prhaiyan:', error);
-    return next(error);
+    logger.error('Error getting active Parhaiyan:', error);
+    throw error;
   }
 };
 
