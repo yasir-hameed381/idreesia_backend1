@@ -19,42 +19,59 @@ const getZonesForUser = async (user) => {
 
     logger.info("Getting zones for user:", {
       is_super_admin: user.is_super_admin,
+      is_super_admin_type: typeof user.is_super_admin,
+      is_all_region_admin: user.is_all_region_admin,
+      is_all_region_admin_type: typeof user.is_all_region_admin,
       is_region_admin: user.is_region_admin,
       is_zone_admin: user.is_zone_admin,
       region_id: user.region_id,
       zone_id: user.zone_id,
     });
 
-    // Super admin - can see all zones
-    if (user.is_super_admin) {
-      // No filter - return all zones
-      logger.info("User has access to all zones");
+    // Matching Laravel Zone::forUser() - only is_all_region_admin gets all zones
+    // Super admin does NOT get all zones automatically - they still need is_all_region_admin
+    if (user.is_all_region_admin === true) {
+      // No filter - return all zones (matching Laravel)
+      logger.info("User has access to all zones (is_all_region_admin)");
+      // Explicitly set where to empty to return all zones
+      where = {};
     }
-    // Region admin - can see zones in their region
-    else if (user.is_region_admin && user.region_id) {
+    // Region admin - can see zones in their region (matching Laravel)
+    else if (user.is_region_admin === true && user.region_id) {
       where.region_id = user.region_id;
       logger.info(`Filtering zones by region_id: ${user.region_id}`);
     }
-    // Zone admin - can only see their own zone
-    else if (user.is_zone_admin && user.zone_id) {
+    // Zone admin - can only see their own zone (matching Laravel)
+    else if (user.is_zone_admin === true && user.zone_id) {
       where.id = user.zone_id;
-      logger.info(`Filtering zones by zone_id: ${user.zone_id}`);
+      logger.info(`Filtering zones by zone_id (zone admin): ${user.zone_id}`);
     }
-    // Mehfil admin or regular user - can only see their zone
+    // Mehfil admin or regular user (including super_admin) - can only see their zone (matching Laravel)
     else if (user.zone_id) {
       where.id = user.zone_id;
-      logger.info(`Filtering zones by zone_id: ${user.zone_id}`);
+      logger.info(`Filtering zones by zone_id (regular user/super_admin): ${user.zone_id}`);
     } else {
       // No access
       logger.info("No zone_id found, returning empty array");
       return [];
     }
 
-    const zones = await zonesModel.findAll({
-      where,
+    logger.info("Final where clause for zones query:", JSON.stringify(where));
+    logger.info("Where object keys count:", Object.keys(where).length);
+
+    // Build query options
+    const queryOptions = {
       order: [["title_en", "ASC"]],
       attributes: ["id", "title_en", "city_en", "country_en", "region_id"],
-    });
+    };
+
+    // Only add where clause if it has filters (not empty object)
+    // Empty where object means return all zones (for super_admin/all_region_admin)
+    if (Object.keys(where).length > 0) {
+      queryOptions.where = where;
+    }
+
+    const zones = await zonesModel.findAll(queryOptions);
 
     logger.info(`Found ${zones.length} zones for user`);
 
@@ -453,10 +470,12 @@ exports.getDashboardStats = async (filters, user) => {
       userRole: {
         is_zone_admin: user.is_zone_admin,
         is_region_admin: user.is_region_admin,
+        is_all_region_admin: user.is_all_region_admin,
         is_super_admin: user.is_super_admin,
         zone_id: user.zone_id,
         region_id: user.region_id,
       },
+      zones: zones.map(z => ({ id: z.id, title: z.title_en })),
     });
 
     return {

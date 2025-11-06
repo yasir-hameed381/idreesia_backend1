@@ -102,6 +102,10 @@ module.exports = (sequelize) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      is_all_region_admin: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       has_affidavit_form: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

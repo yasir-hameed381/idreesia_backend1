@@ -96,6 +96,11 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: false,
       },
+      is_all_region_admin: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       birth_year: {
         type: DataTypes.INTEGER,
         allowNull: true,

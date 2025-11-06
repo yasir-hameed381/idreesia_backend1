@@ -50,6 +50,7 @@ exports.createAdminUser = async (req, res, next) => {
       is_mehfil_admin,
       is_super_admin,
       is_region_admin,
+      is_all_region_admin,
       user_type,
       father_name,
       phone_number,
@@ -79,6 +80,7 @@ exports.createAdminUser = async (req, res, next) => {
       is_mehfil_admin,
       is_super_admin,
       is_region_admin,
+      is_all_region_admin,
       user_type,
       father_name,
       phone_number,
@@ -93,7 +95,8 @@ exports.createAdminUser = async (req, res, next) => {
       affidavit_form_file,
       has_affidavit_form,
       region_id,
-      role_id
+      role_id,
+      role_ids
     });
     return res.status(201).json({
       success: true,
@@ -120,6 +123,7 @@ exports.updateAdminUser = async (req, res, next) => {
       is_mehfil_admin,
       is_super_admin,
       is_region_admin,
+      is_all_region_admin,
       user_type,
       father_name,
       phone_number,
@@ -157,6 +161,7 @@ exports.updateAdminUser = async (req, res, next) => {
       is_mehfil_admin,
       is_super_admin,
       is_region_admin,
+      is_all_region_admin,
       user_type,
       father_name,
       phone_number,
