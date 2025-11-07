@@ -30,6 +30,7 @@ const route = Object.freeze({
   DUTY_TYPE: "/duty-types-data",
   DUTY_ROSTER: "/duty-rosters-data",
   DASHBOARD: "/dashboard",
+  TARTEEB_REQUESTS: "/tarteeb-requests",
 });
 
 module.exports = { route };
