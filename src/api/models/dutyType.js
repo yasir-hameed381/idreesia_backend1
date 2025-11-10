@@ -26,11 +26,6 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 1,
       },
-      is_hidden: {
-        type: DataTypes.TINYINT(1),
-        allowNull: false,
-        defaultValue: 0,
-      },
       created_by: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,

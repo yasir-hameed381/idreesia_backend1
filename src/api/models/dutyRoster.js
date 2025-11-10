@@ -9,10 +9,6 @@ module.exports = (sequelize) => {
         autoIncrement: true,
         primaryKey: true,
       },
-      region_id: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
       zone_id: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
@@ -24,34 +20,6 @@ module.exports = (sequelize) => {
       user_id: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: false,
-      },
-      duty_type_id_monday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
-      duty_type_id_tuesday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
-      duty_type_id_wednesday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
-      duty_type_id_thursday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
-      duty_type_id_friday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
-      duty_type_id_saturday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
-      duty_type_id_sunday: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
       },
       created_by: {
         type: DataTypes.BIGINT.UNSIGNED,

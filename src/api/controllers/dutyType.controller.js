@@ -6,12 +6,13 @@ const dutyTypeService = require("../services/dutyTypeService");
  */
 exports.getAllDutyTypes = async (req, res, next) => {
   try {
-    const { page, size, search } = req.query;
+    const { page, size, search, zone_id } = req.query;
 
     const result = await dutyTypeService.getAllDutyTypes({
       page,
       size,
       search,
+      zone_id,
     });
 
     return res.json(result);
@@ -26,7 +27,8 @@ exports.getAllDutyTypes = async (req, res, next) => {
  */
 exports.getActiveDutyTypes = async (req, res, next) => {
   try {
-    const dutyTypes = await dutyTypeService.getActiveDutyTypes();
+    const { zone_id } = req.query;
+    const dutyTypes = await dutyTypeService.getActiveDutyTypes(zone_id);
     return res.json({
       success: true,
       data: dutyTypes,
@@ -65,7 +67,6 @@ exports.createDutyType = async (req, res, next) => {
       name,
       description,
       is_editable = 1,
-      is_hidden = 0,
       created_by,
     } = req.body;
 
@@ -81,7 +82,6 @@ exports.createDutyType = async (req, res, next) => {
       name,
       description,
       is_editable,
-      is_hidden,
       created_by,
     });
 
@@ -107,7 +107,6 @@ exports.updateDutyType = async (req, res, next) => {
       name,
       description,
       is_editable,
-      is_hidden,
       updated_by,
     } = req.body;
 
@@ -123,7 +122,6 @@ exports.updateDutyType = async (req, res, next) => {
       name,
       description,
       is_editable,
-      is_hidden,
       updated_by,
     });
 

@@ -6,19 +6,23 @@ const dutyTypeModel = require("../models/dutyType")(db);
 /**
  * Get all duty types with pagination and search
  */
-exports.getAllDutyTypes = async ({ page = 1, size = 10, search = "" }) => {
+exports.getAllDutyTypes = async ({ page = 1, size = 10, search = "", zone_id = null }) => {
   try {
     const limit = parseInt(size) || 10;
     const offset = (parseInt(page) - 1) * limit;
 
-    const whereClause = search
-      ? {
-          [Op.or]: [
-            { name: { [Op.like]: `%${search}%` } },
-            { description: { [Op.like]: `%${search}%` } },
-          ],
-        }
-      : {};
+    const whereClause = {};
+
+    if (zone_id) {
+      whereClause.zone_id = zone_id;
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { description: { [Op.like]: `%${search}%` } },
+      ];
+    }
 
     const { count, rows } = await dutyTypeModel.findAndCountAll({
       where: whereClause,
@@ -118,21 +122,16 @@ exports.deleteDutyType = async (id) => {
 /**
  * Get all active duty types (not hidden)
  */
-exports.getActiveDutyTypes = async () => {
+exports.getActiveDutyTypes = async (zone_id = null) => {
   try {
-    // Explicitly exclude is_hidden column as it doesn't exist in the database
+    const whereClause = {};
+    
+    if (zone_id) {
+      whereClause.zone_id = zone_id;
+    }
+
     const dutyTypes = await dutyTypeModel.findAll({
-      attributes: [
-        "id",
-        "zone_id",
-        "name",
-        "description",
-        "is_editable",
-        "created_by",
-        "updated_by",
-        "created_at",
-        "updated_at",
-      ],
+      where: whereClause,
       order: [["name", "ASC"]],
     });
     return dutyTypes;

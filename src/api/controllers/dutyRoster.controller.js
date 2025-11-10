@@ -7,18 +7,43 @@ const dutyRosterAssignmentService = require("../services/dutyRosterAssignmentSer
  */
 exports.getAllDutyRosters = async (req, res, next) => {
   try {
+    // No filters applied - get all duty rosters
+    const result = await dutyRosterService.getAllDutyRosters({});
+
+    return res.json(result);
+  } catch (error) {
+    logger.error("Error fetching duty rosters:", error);
+    return next(error);
+  }
+};
+
+/**
+ * Get karkuns/ehad karkuns available for roster assignment
+ */
+exports.getAvailableKarkuns = async (req, res, next) => {
+  try {
     const { zoneId, mehfilDirectoryId, userTypeFilter, search } = req.query;
 
-    const result = await dutyRosterService.getAllDutyRosters({
+    if (!zoneId) {
+      return res.status(400).json({
+        success: false,
+        message: "zoneId is required",
+      });
+    }
+
+    const karkuns = await dutyRosterService.getAvailableKarkuns({
       zoneId,
       mehfilDirectoryId,
       userTypeFilter: userTypeFilter || "karkun",
       search: search || "",
     });
 
-    return res.json(result);
+    return res.json({
+      success: true,
+      data: karkuns,
+    });
   } catch (error) {
-    logger.error("Error fetching duty rosters:", error);
+    logger.error("Error fetching available karkuns:", error);
     return next(error);
   }
 };
@@ -81,11 +106,22 @@ exports.createDutyRoster = async (req, res, next) => {
       });
     }
 
+    // Extract duty assignments from request body
+    const duties = {};
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    days.forEach(day => {
+      const dutyTypeId = req.body[`duty_type_id_${day}`];
+      if (dutyTypeId) {
+        duties[day] = parseInt(dutyTypeId);
+      }
+    });
+
     const dutyRoster = await dutyRosterService.createDutyRoster({
       user_id,
       zone_id,
       mehfil_directory_id,
       created_by,
+      duties, // Pass duty assignments to service
     });
 
     return res.status(201).json({
