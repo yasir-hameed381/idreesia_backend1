@@ -32,6 +32,7 @@ const dutyTypeRoute = require("./dutyType.route");
 const dutyRosterRoute = require("./dutyRoster.route");
 const dashboardRoute = require("./dashboard.route");
 const tarteebRequestsRoute = require("./tarteebRequests.route");
+const khatRoute = require("./khat.route");
 const { route } = require("../../Enums/routeEnums");
 
 const router = express.Router();
@@ -78,6 +79,7 @@ router.use(route.DUTY_TYPE, dutyTypeRoute);
 router.use(route.DUTY_ROSTER, dutyRosterRoute);
 router.use(route.DASHBOARD, dashboardRoute);
 router.use(route.TARTEEB_REQUESTS, tarteebRequestsRoute);
+router.use(route.KHAT, khatRoute);
 
 // Health check route
 router.get("/healthcheck", (req, res) => {
