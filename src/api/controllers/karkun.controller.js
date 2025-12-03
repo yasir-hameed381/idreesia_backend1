@@ -57,17 +57,25 @@ exports.createKarkun = async (req, res, next) => {
 
 exports.getKarkun = async (req, res, next) => {
   try {
-    const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+    // Construct requestUrl for pagination links
+    const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}${req.path}`;
     const { page, size, search } = req.query;
+    
+    // Parse and validate parameters
+    const pageNum = parseInt(page, 10) || 1;
+    const sizeNum = parseInt(size, 10) || 50;
+    
     const result = await karkunService.getKarkun({
-      page,
-      size,
-      search,
-      requestUrl,
+      page: pageNum,
+      size: sizeNum,
+      search: search || "",
+      requestUrl: baseUrl,
     });
     return res.json(result);
   } catch (error) {
     logger.error("Error fetching karkuns:", error);
+    logger.error("Error message:", error.message);
+    logger.error("Error stack:", error.stack);
     return next(error);
   }
 };
@@ -78,17 +86,18 @@ exports.getKarkunById = async (req, res, next) => {
     if (!id) {
       return res
         .status(400)
-        .json({ success: false, messsage: "karkun id not found " });
+        .json({ success: false, message: "karkun id not found" });
     }
     const result = await karkunService.getKarkunById(id);
 
-    if (!result.success) {
-      return res.status(404).json(result);
+    if (!result || !result.success) {
+      return res.status(404).json(result || { success: false, message: "karkun not found" });
     }
     return res.json(result);
   } catch (error) {
     console.error("error fetching karkuns", error);
     logger.error("Error fetching karkuns:", error);
+    return next(error);
   }
 };
 

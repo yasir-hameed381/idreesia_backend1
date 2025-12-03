@@ -8,18 +8,18 @@ const { env } = require('../../config/vars');
  * @public
  */
 const handler = (err, req, res, next) => {
+  const status = err.status || err.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
   const response = {
-    code: err.status,
-    message: err.message || httpStatus[err.status],
+    code: status,
+    message: err.message || httpStatus[status],
     errors: err.errors,
-    stack: err.stack,
   };
 
-  if (env !== 'development') {
-    delete response.stack;
+  if (env === 'development') {
+    response.stack = err.stack;
   }
 
-  res.status(err.status);
+  res.status(status);
   res.json(response);
 };
 exports.handler = handler;

@@ -65,6 +65,11 @@ exports.getKarkun = async ({
   requestUrl = "",
 }) => {
   try {
+    // Validate that model is initialized
+    if (!karkunModel) {
+      throw new Error("Karkun model is not initialized");
+    }
+
     const searchFields = [
       SearchFields.NAME,
       SearchFields.ZONE,
@@ -75,14 +80,15 @@ exports.getKarkun = async ({
       SearchFields.EHAD_YEAR,
       SearchFields.DUTY_TYPE,
     ];
+    
     // Use the pagination service to calculate offset, limit, and currentPage based on the given page and size
-    const { offset, limit, currentPage } = await paginate({ page, size });
+    const { offset, limit, currentPage } = paginate({ page, size });
 
     // Initialize the 'where' object for query conditions
     const where = {};
 
     // Add search condition if 'search' is provided and there are fields to search in
-    if (search && searchFields.length > 0) {
+    if (search && search.trim() && searchFields.length > 0) {
       // Dynamically generate a WHERE clause for the search fields using Sequelize's Op.like operator
       where[Op.or] = searchFields.map((field) => ({
         [field]: { [Op.like]: `%${search}%` }, // Perform a LIKE search with the search keyword
@@ -93,31 +99,54 @@ exports.getKarkun = async ({
     // - 'where' specifies the filtering conditions
     // - 'offset' skips a certain number of records for pagination
     // - 'limit' limits the number of records retrieved
-    const { count, rows: data } = await karkunModel.findAndCountAll({
-      where,
-      offset,
-      limit,
+    const queryOptions = {
+      offset: Math.max(0, offset), // Ensure offset is not negative
+      limit: Math.max(1, Math.min(limit, 100)), // Ensure limit is between 1 and 100
+      order: [['id', 'DESC']], // Order by id (more reliable than created_at)
+    };
+
+    // Only add where clause if it has conditions
+    if (Object.keys(where).length > 0) {
+      queryOptions.where = where;
+    }
+
+    logger.info(`Querying karkuns with options:`, {
+      offset: queryOptions.offset,
+      limit: queryOptions.limit,
+      hasWhere: !!queryOptions.where,
     });
+
+    const { count, rows: data } = await karkunModel.findAndCountAll(queryOptions);
+
+    logger.info(`Found ${count} total karkuns, returning ${data.length} records`);
 
     const { links, meta } = constructPagination({
       count,
       limit,
       offset,
       currentPage,
-      baseUrl: requestUrl,
+      baseUrl: requestUrl || '/api/karkun',
     });
 
     // Return the data and pagination details
     // - 'data' contains the rows retrieved from the database
     // - 'pagination' includes the current page, total pages, and total number of items
     return {
-      data,
+      data: data || [],
       links,
       meta,
     };
   } catch (error) {
     // Log any errors encountered during the process
-    logger.error("Error fetching karkun:" + error.message);
+    logger.error("Error fetching karkun:", error.message);
+    logger.error("Error name:", error.name);
+    logger.error("Error stack:", error.stack);
+    
+    // If it's a Sequelize error, log more details
+    if (error.name === 'SequelizeDatabaseError') {
+      logger.error("Database error details:", error.original);
+    }
+    
     throw error; // Re-throw the error so the controller can handle it properly
   }
 };
@@ -138,6 +167,7 @@ exports.getKarkunById = async (id) => {
   } catch (error) {
     console.error("error getting karkun", error);
     logger.error("Error fetching karkun users:", error);
+    throw error;
   }
 };
 
