@@ -67,12 +67,20 @@ exports.getKarkun = async ({
   try {
     // Validate that model is initialized
     if (!karkunModel) {
+      logger.error("Karkun model is not initialized");
       throw new Error("Karkun model is not initialized");
     }
 
+    // Validate database connection
+    if (!db) {
+      logger.error("Database connection is not available");
+      throw new Error("Database connection is not available");
+    }
+
+    // Only search in string/text fields that support LIKE queries
+    // Removed ZONE from search as it might be numeric/ID field
     const searchFields = [
       SearchFields.NAME,
-      SearchFields.ZONE,
       SearchFields.FATHERNAME,
       SearchFields.MOBILE_NO,
       SearchFields.KARKUN_CNIC,
@@ -90,9 +98,12 @@ exports.getKarkun = async ({
     // Add search condition if 'search' is provided and there are fields to search in
     if (search && search.trim() && searchFields.length > 0) {
       // Dynamically generate a WHERE clause for the search fields using Sequelize's Op.like operator
-      where[Op.or] = searchFields.map((field) => ({
-        [field]: { [Op.like]: `%${search}%` }, // Perform a LIKE search with the search keyword
-      }));
+      // Only search in string fields
+      where[Op.or] = searchFields
+        .filter(field => field) // Filter out any undefined/null fields
+        .map((field) => ({
+          [field]: { [Op.like]: `%${search}%` }, // Perform a LIKE search with the search keyword
+        }));
     }
 
     // Query the database using Sequelize's findAndCountAll method
@@ -114,11 +125,32 @@ exports.getKarkun = async ({
       offset: queryOptions.offset,
       limit: queryOptions.limit,
       hasWhere: !!queryOptions.where,
+      whereKeys: queryOptions.where ? Object.keys(queryOptions.where) : [],
     });
 
-    const { count, rows: data } = await karkunModel.findAndCountAll(queryOptions);
-
-    logger.info(`Found ${count} total karkuns, returning ${data.length} records`);
+    let count, data;
+    try {
+      const result = await karkunModel.findAndCountAll(queryOptions);
+      count = result.count;
+      data = result.rows;
+      logger.info(`Found ${count} total karkuns, returning ${data.length} records`);
+    } catch (queryError) {
+      logger.error("Database query error:", queryError);
+      logger.error("Query error name:", queryError.name);
+      logger.error("Query error message:", queryError.message);
+      logger.error("Query error stack:", queryError.stack);
+      
+      // If it's a Sequelize error, log more details
+      if (queryError.name === 'SequelizeDatabaseError' || queryError.name === 'SequelizeError') {
+        logger.error("Sequelize error details:", {
+          original: queryError.original,
+          sql: queryError.sql,
+        });
+      }
+      
+      // Re-throw with more context
+      throw new Error(`Failed to query karkuns: ${queryError.message}`);
+    }
 
     const { links, meta } = constructPagination({
       count,
