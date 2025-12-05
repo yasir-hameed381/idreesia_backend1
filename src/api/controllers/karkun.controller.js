@@ -59,6 +59,15 @@ exports.createKarkun = async (req, res, next) => {
 
 exports.getKarkun = async (req, res, next) => {
   try {
+    // Remove ETag header if it exists to prevent 304 Not Modified responses
+    res.removeHeader('ETag');
+    
+    // Set cache-control headers to prevent caching and ensure 200 response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+
     // Construct requestUrl for pagination links
     const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}${req.path}`;
     const { page, size, search } = req.query;
@@ -73,7 +82,9 @@ exports.getKarkun = async (req, res, next) => {
       search: search || "",
       requestUrl: baseUrl,
     });
-    return res.json(result);
+    
+    // Explicitly set status 200 to ensure fresh response
+    return res.status(200).json(result);
   } catch (error) {
     logger.error("Error fetching karkuns:", error);
     logger.error("Error message:", error.message);
@@ -84,6 +95,15 @@ exports.getKarkun = async (req, res, next) => {
 
 exports.getKarkunById = async (req, res, next) => {
   try {
+    // Remove ETag header if it exists to prevent 304 Not Modified responses
+    res.removeHeader('ETag');
+    
+    // Set cache-control headers to prevent caching and ensure 200 response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+
     const { id } = req.params;
     if (!id) {
       return res
@@ -95,7 +115,7 @@ exports.getKarkunById = async (req, res, next) => {
     if (!result || !result.success) {
       return res.status(404).json(result || { success: false, message: "karkun not found" });
     }
-    return res.json(result);
+    return res.status(200).json(result);
   } catch (error) {
     console.error("error fetching karkuns", error);
     logger.error("Error fetching karkuns:", error);
