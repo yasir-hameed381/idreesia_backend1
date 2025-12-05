@@ -37,7 +37,7 @@ exports.getuserAdmins = async ({
       SearchFields.DUTY_TYPE,
     ];
     // Use the pagination service to calculate offset, limit, and currentPage based on the given page and size
-    const { offset, limit, currentPage } = await paginate({ page, size });
+    const { offset, limit, currentPage } = paginate({ page, size });
 
     // Initialize the 'where' object for query conditions
     const where = {};
@@ -90,7 +90,16 @@ exports.getuserAdmins = async ({
     };
   } catch (error) {
     // Log any errors encountered during the process
-    logger.error("Error fetching admin users:" + error.message);
+    logger.error("Error fetching admin users:", error.message);
+    logger.error("Error name:", error.name);
+    logger.error("Error stack:", error.stack);
+    
+    // If it's a Sequelize error, log more details
+    if (error.name === 'SequelizeDatabaseError') {
+      logger.error("Database error details:", error.original);
+    }
+    
+    throw error; // Re-throw the error so the controller can handle it properly
   }
 };
 

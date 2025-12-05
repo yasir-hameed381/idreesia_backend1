@@ -3,6 +3,15 @@ const adminUsersService = require("../services/adminUsersService");
 
 exports.getAdminUsers = async (req, res, next) => {
   try {
+    // Remove ETag header if it exists to prevent 304 Not Modified responses
+    res.removeHeader('ETag');
+    
+    // Set cache-control headers to prevent caching and ensure 200 response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
     const { page, size, search } = req.query;
     const result = await adminUsersService.getuserAdmins({
@@ -11,9 +20,13 @@ exports.getAdminUsers = async (req, res, next) => {
       search,
       requestUrl,
     });
-    return res.json(result);
+    
+    // Explicitly set status 200 to ensure fresh response
+    return res.status(200).json(result);
   } catch (error) {
     logger.error("Error fetching admin users:", error);
+    logger.error("Error message:", error.message);
+    logger.error("Error stack:", error.stack);
     return next(error);
   }
 };
