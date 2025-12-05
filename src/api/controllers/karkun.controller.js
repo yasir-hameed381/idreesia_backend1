@@ -5,6 +5,7 @@ exports.createKarkun = async (req, res, next) => {
   try {
     const {
       zone,
+      zone_id,
       name,
       email,
       password,
@@ -12,35 +13,36 @@ exports.createKarkun = async (req, res, next) => {
       country,
       is_zone_admin,
       is_mehfile_admin,
+      is_mehfil_admin,
       user_type,
       father_name,
       mobile_no,
+      phone_number,
       cnic_no,
+      id_card_number,
       address,
       birth_year,
       ehad_year,
-      mehfile,
       duty_days,
       duty_type,
     } = req.body;
 
     const result = await karkunService.createKarkun({
-      zone,
+      zone_id: zone_id || zone, // Support both zone and zone_id
       name,
       email,
       password,
       city,
       country,
       is_zone_admin,
-      is_mehfile_admin,
-      user_type,
+      is_mehfil_admin: is_mehfil_admin || is_mehfile_admin, // Support both spellings
+      user_type: user_type || 'karkun',
       father_name,
-      mobile_no,
-      cnic_no,
+      phone_number: phone_number || mobile_no, // Support both field names
+      id_card_number: id_card_number || cnic_no, // Support both field names
       address,
       birth_year,
       ehad_year,
-      mehfile,
       duty_days,
       duty_type,
     });
@@ -106,6 +108,7 @@ exports.updateKarkun = async (req, res, next) => {
     const { id } = req.params;
     const {
       zone,
+      zone_id,
       name,
       email,
       password,
@@ -113,14 +116,16 @@ exports.updateKarkun = async (req, res, next) => {
       country,
       is_zone_admin,
       is_mehfile_admin,
+      is_mehfil_admin,
       user_type,
       father_name,
       mobile_no,
+      phone_number,
       cnic_no,
+      id_card_number,
       address,
       birth_year,
       ehad_year,
-      mehfile,
       duty_days,
       duty_type,
     } = req.body;
@@ -132,31 +137,23 @@ exports.updateKarkun = async (req, res, next) => {
       });
     }
 
-    // if (!title_en || !title_ur || !country_en || !country_ur || !city_en || !city_ur) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'Missing required fields: title_en , title_ur , country_en , country_ur , city_en , city_ur are required.',
-    //   });
-    // }
-
     const result = await karkunService.updateKarkun({
       id,
-      zone,
+      zone_id: zone_id || zone, // Support both zone and zone_id
       name,
       email,
       password,
       city,
       country,
       is_zone_admin,
-      is_mehfile_admin,
+      is_mehfil_admin: is_mehfil_admin || is_mehfile_admin, // Support both spellings
       user_type,
       father_name,
-      mobile_no,
-      cnic_no,
+      phone_number: phone_number || mobile_no, // Support both field names
+      id_card_number: id_card_number || cnic_no, // Support both field names
       address,
       birth_year,
       ehad_year,
-      mehfile,
       duty_days,
       duty_type,
     });
