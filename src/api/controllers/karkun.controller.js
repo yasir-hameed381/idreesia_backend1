@@ -70,16 +70,18 @@ exports.getKarkun = async (req, res, next) => {
 
     // Construct requestUrl for pagination links
     const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}${req.path}`;
-    const { page, size, search } = req.query;
+    const { page, size, search, zone_id } = req.query;
     
     // Parse and validate parameters
     const pageNum = parseInt(page, 10) || 1;
     const sizeNum = parseInt(size, 10) || 50;
+    const zoneIdNum = zone_id ? parseInt(zone_id, 10) : null;
     
     const result = await karkunService.getKarkun({
       page: pageNum,
       size: sizeNum,
       search: search || "",
+      zone_id: zoneIdNum,
       requestUrl: baseUrl,
     });
     

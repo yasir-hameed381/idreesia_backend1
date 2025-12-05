@@ -60,6 +60,7 @@ exports.getKarkun = async ({
   page = 1,
   size = 50,
   search = "",
+  zone_id = null,
   requestUrl = "",
 }) => {
   try {
@@ -81,6 +82,13 @@ exports.getKarkun = async ({
         ]
       }
     ];
+
+    // Add zone_id filter if provided
+    if (zone_id !== null && zone_id !== undefined) {
+      whereConditions.push({
+        zone_id: zone_id
+      });
+    }
 
     // Add search condition if 'search' is provided
     if (search && search.trim()) {
