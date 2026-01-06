@@ -176,25 +176,31 @@ exports.login = async (email, password) => {
 exports.register = async (email, password, name) => {
   // Check if the email already exists
   const existingUser = await userModel.findOne({ where: { email } });
- 
+
   if (existingUser) {
     const error = new Error(ErrorMessages.EMAIL_EXIST);
     error.statusCode = 400;
     throw error;
   }
- 
+
   // Hash the password
   const hashedPassword = await bcrypt.hash(password, 9);
- 
+
+  // Generate API token (random string)
+  const crypto = require('crypto');
+  const apiToken = crypto.randomBytes(32).toString('hex');
+
   // Create the new user
   const newUser = await userModel.create({
     email,
     password: hashedPassword,
     name,
+    api_token: apiToken,
+    is_active: true, // Set user as active by default
   });
- 
+
   logger.info(ErrorMessages.USER_REGISTER_SUCCESS, { email, name });
- 
+
   return {
     user: newUser,
     message: ErrorMessages.REGISTRATION_SUCCESS,
