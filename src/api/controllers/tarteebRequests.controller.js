@@ -72,10 +72,16 @@ exports.createTarteebRequest = async (req, res, next) => {
       // Create the request
       const createResult = await tarteebRequestsService.createTarteebRequest(requestData);
       
-      // Mark token as used after successful creation
-      if (createResult.success) {
-        await tarteebRequestsService.markTokenAsUsed(token);
+      // Check if creation failed due to validation
+      if (!createResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: createResult.message || "Failed to create tarteeb request.",
+        });
       }
+      
+      // Mark token as used after successful creation
+      await tarteebRequestsService.markTokenAsUsed(token);
 
       return res.status(201).json({
         success: true,
@@ -86,6 +92,14 @@ exports.createTarteebRequest = async (req, res, next) => {
 
     // Regular creation without token
     const result = await tarteebRequestsService.createTarteebRequest(requestData);
+
+    // Check if creation failed due to validation
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message || "Failed to create tarteeb request.",
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -112,7 +126,9 @@ exports.updateTarteebRequest = async (req, res, next) => {
     const result = await tarteebRequestsService.updateTarteebRequest(id, req.body);
 
     if (!result.success) {
-      return res.status(404).json(result);
+      // Check if it's a validation error (400) or not found error (404)
+      const statusCode = result.message && result.message.includes("does not exist") ? 400 : 404;
+      return res.status(statusCode).json(result);
     }
 
     return res.status(200).json(result);
@@ -174,7 +190,7 @@ exports.generatePublicLink = async (req, res, next) => {
     
     // Include locale in the URL (default to 'en' if not specified)
     const locale = process.env.DEFAULT_LOCALE || 'en';
-    const publicUrl = `${frontendUrl}/${locale}/tarteeb-request/form/${result.data.token}`;
+    const publicUrl = `/${locale}/tarteeb-request/form/${result.data.token}`;
 
 
     return res.status(200).json({

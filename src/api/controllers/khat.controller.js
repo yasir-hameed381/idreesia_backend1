@@ -140,7 +140,7 @@ exports.generatePublicLink = async (req, res, next) => {
     
     // Include locale in the URL (default to 'en' if not specified)
     const locale = process.env.DEFAULT_LOCALE || 'en';
-    const publicUrl = `${frontendUrl}/${locale}/khatoot/form/${result.data.token}`;
+    const publicUrl = `/${locale}/khatoot/form/${result.data.token}`;
 
     return res.status(200).json({
       success: true,

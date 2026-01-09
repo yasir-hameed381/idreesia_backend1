@@ -2,6 +2,8 @@ const logger = require("../../config/logger");
 const { Op } = require("sequelize");
 const { sequelize: db } = require("../../config/database");
 const TarteebRequestModel = require("../models/tarteebRequests")(db);
+const zonesModel = require("../models/zone")(db);
+const mehfilDirectoryModel = require("../models/mehfil-directories")(db);
 const {
   paginate,
   constructPagination,
@@ -163,6 +165,28 @@ exports.createTarteebRequest = async (payload) => {
   try {
     const tarteebRequestPayload = buildPayload(payload);
 
+    // Validate zone_id if provided
+    if (tarteebRequestPayload.zone_id && tarteebRequestPayload.zone_id !== null && tarteebRequestPayload.zone_id !== 0) {
+      const zone = await zonesModel.findByPk(tarteebRequestPayload.zone_id);
+      if (!zone) {
+        return {
+          success: false,
+          message: `Invalid zone_id: Zone with ID ${tarteebRequestPayload.zone_id} does not exist.`,
+        };
+      }
+    }
+
+    // Validate mehfil_directory_id if provided
+    if (tarteebRequestPayload.mehfil_directory_id && tarteebRequestPayload.mehfil_directory_id !== null && tarteebRequestPayload.mehfil_directory_id !== 0) {
+      const mehfilDirectory = await mehfilDirectoryModel.findByPk(tarteebRequestPayload.mehfil_directory_id);
+      if (!mehfilDirectory) {
+        return {
+          success: false,
+          message: `Invalid mehfil_directory_id: Mehfil Directory with ID ${tarteebRequestPayload.mehfil_directory_id} does not exist.`,
+        };
+      }
+    }
+
     tarteebRequestPayload.created_at = new Date();
     tarteebRequestPayload.updated_at = new Date();
 
@@ -174,6 +198,16 @@ exports.createTarteebRequest = async (payload) => {
     };
   } catch (error) {
     logger.error(`Error creating tarteeb request: ${error.message}`);
+    
+    // Check if it's a foreign key constraint error
+    if (error.message && error.message.includes("foreign key constraint fails")) {
+      if (error.message.includes("zone_id")) {
+        throw new Error(`Invalid zone_id: The provided zone does not exist in the database.`);
+      } else if (error.message.includes("mehfil_directory_id")) {
+        throw new Error(`Invalid mehfil_directory_id: The provided mehfil directory does not exist in the database.`);
+      }
+    }
+    
     throw error;
   }
 };
@@ -181,6 +215,29 @@ exports.createTarteebRequest = async (payload) => {
 exports.updateTarteebRequest = async (id, payload) => {
   try {
     const tarteebRequestPayload = buildPayload(payload);
+    
+    // Validate zone_id if provided
+    if (tarteebRequestPayload.zone_id && tarteebRequestPayload.zone_id !== null && tarteebRequestPayload.zone_id !== 0) {
+      const zone = await zonesModel.findByPk(tarteebRequestPayload.zone_id);
+      if (!zone) {
+        return {
+          success: false,
+          message: `Invalid zone_id: Zone with ID ${tarteebRequestPayload.zone_id} does not exist.`,
+        };
+      }
+    }
+
+    // Validate mehfil_directory_id if provided
+    if (tarteebRequestPayload.mehfil_directory_id && tarteebRequestPayload.mehfil_directory_id !== null && tarteebRequestPayload.mehfil_directory_id !== 0) {
+      const mehfilDirectory = await mehfilDirectoryModel.findByPk(tarteebRequestPayload.mehfil_directory_id);
+      if (!mehfilDirectory) {
+        return {
+          success: false,
+          message: `Invalid mehfil_directory_id: Mehfil Directory with ID ${tarteebRequestPayload.mehfil_directory_id} does not exist.`,
+        };
+      }
+    }
+
     tarteebRequestPayload.updated_at = new Date();
 
     const [affectedRows] = await TarteebRequestModel.update(tarteebRequestPayload, {
@@ -200,6 +257,16 @@ exports.updateTarteebRequest = async (id, payload) => {
     };
   } catch (error) {
     logger.error(`Error updating tarteeb request: ${error.message}`);
+    
+    // Check if it's a foreign key constraint error
+    if (error.message && error.message.includes("foreign key constraint fails")) {
+      if (error.message.includes("zone_id")) {
+        throw new Error(`Invalid zone_id: The provided zone does not exist in the database.`);
+      } else if (error.message.includes("mehfil_directory_id")) {
+        throw new Error(`Invalid mehfil_directory_id: The provided mehfil directory does not exist in the database.`);
+      }
+    }
+    
     throw error;
   }
 };
