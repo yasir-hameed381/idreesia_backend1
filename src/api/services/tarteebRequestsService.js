@@ -227,3 +227,129 @@ exports.deleteTarteebRequest = async (id) => {
   }
 };
 
+// Token management for public form links
+const TarteebFormTokenModel = require("../models/tarteebFormTokens")(db);
+const crypto = require("crypto");
+
+exports.generatePublicLinkToken = async ({ linkExpiryHours, createdBy, zoneId, mehfilDirectoryId }) => {
+  try {
+    // Generate secure random token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + parseInt(linkExpiryHours, 10));
+
+    // Store token in database
+    const tokenRecord = await TarteebFormTokenModel.create({
+      token,
+      expires_at: expiresAt,
+      created_by: createdBy || null,
+      zone_id: zoneId || null,
+      mehfil_directory_id: mehfilDirectoryId || null,
+      used: 0,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    // Clean up expired tokens (run asynchronously)
+    TarteebFormTokenModel.destroy({
+      where: {
+        expires_at: { [Op.lt]: new Date() },
+      },
+    }).catch((err) => {
+      // Silently fail cleanup
+    });
+
+    return {
+      success: true,
+      data: {
+        token,
+        expires_at: expiresAt,
+      },
+    };
+  } catch (error) {
+    logger.error(`Error generating public link token: ${error.message}`, error.stack);
+    // Check if it's a table not found error
+    if (error.message && error.message.includes("doesn't exist")) {
+      throw new Error(`Database table 'tarteeb_form_tokens' does not exist. Please run the migration: database/migrations/create_tarteeb_form_tokens_table.sql`);
+    }
+    throw error;
+  }
+};
+
+exports.validatePublicLinkToken = async (token) => {
+  try {
+    const tokenRecord = await TarteebFormTokenModel.findOne({
+      where: { token },
+    });
+
+    if (!tokenRecord) {
+      return {
+        success: false,
+        valid: false,
+        message: "Invalid token.",
+      };
+    }
+
+    // Check if expired
+    if (new Date() > new Date(tokenRecord.expires_at)) {
+      return {
+        success: false,
+        valid: false,
+        message: "Token has expired.",
+      };
+    }
+
+    // Check if already used
+    if (tokenRecord.used === 1) {
+      return {
+        success: false,
+        valid: false,
+        message: "Token has already been used.",
+      };
+    }
+
+    return {
+      success: true,
+      valid: true,
+      data: {
+        zone_id: tokenRecord.zone_id,
+        mehfil_directory_id: tokenRecord.mehfil_directory_id,
+        created_by: tokenRecord.created_by,
+      },
+    };
+  } catch (error) {
+    logger.error(`Error validating public link token: ${error.message}`);
+    throw error;
+  }
+};
+
+exports.markTokenAsUsed = async (token) => {
+  try {
+    const [affectedRows] = await TarteebFormTokenModel.update(
+      {
+        used: 1,
+        used_at: new Date(),
+        updated_at: new Date(),
+      },
+      {
+        where: { token },
+      }
+    );
+
+    if (!affectedRows) {
+      return {
+        success: false,
+        message: "Token not found.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Token marked as used.",
+    };
+  } catch (error) {
+    logger.error(`Error marking token as used: ${error.message}`);
+    throw error;
+  }
+};
+

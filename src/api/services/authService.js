@@ -10,6 +10,7 @@ const roleHasPermissionsModel = require('../models/roleHasPermissions')(db);
 const modelHasRolesModel = require('../models/modelHasRoles')(db);
 const { jwtSecret } = require('../../config/vars');
 const { ErrorMessages } = require('../Enums/errorMessages');
+const RateLimiter = require('./rateLimiter');
  
 // Set up associations manually
 // Step 1: AdminUser -> model_has_roles (user.id = model_has_roles.model_id)
@@ -40,7 +41,23 @@ permissionsModel.belongsToMany(rolesModel, {
   as: 'roles',
 });
  
-exports.login = async (email, password) => {
+exports.login = async (email, password, ipAddress = '127.0.0.1') => {
+  // Rate limiting check (matching Laravel logic)
+  const throttleKey = RateLimiter.throttleKey(email, ipAddress);
+  
+  // Ensure not rate limited (5 attempts max)
+  if (RateLimiter.tooManyAttempts(throttleKey, 5)) {
+    const seconds = RateLimiter.availableIn(throttleKey, 1);
+    const minutes = Math.ceil(seconds / 60);
+    const error = new Error(
+      `Too many login attempts. Please try again in ${minutes} minute(s).`
+    );
+    error.statusCode = 429;
+    error.seconds = seconds;
+    error.minutes = minutes;
+    throw error;
+  }
+
   // Step 1: SELECT * FROM users where email = 'email@example.com'
   let user = await adminUserModel.findOne({
     where: { email },
@@ -75,20 +92,30 @@ exports.login = async (email, password) => {
   if (!user) {
     user = await userModel.findOne({ where: { email } });
   }
+ console.log('password',password ,'user.password',user ? user.password : 'no user');
+  // Check if user exists and password matches
+  const isMatch = user ? await bcrypt.compare(password, user.password) : false;
+  console.log(`Password match for user ${email}:`, isMatch);
  
-  if (!user) {
-    const error = new Error(ErrorMessages.NOT_FOUND);
-    error.statusCode = 404;
-    throw error;
-  }
- 
-  const isMatch = await bcrypt.compare(password, user.password);
- 
-  if (!isMatch) {
-    const error = new Error(ErrorMessages.INVALID_EMAIL_PASSWORD);
+  if (!user || !isMatch) {
+    // Increment rate limiter on failed attempt
+    RateLimiter.hit(throttleKey, 1);
+    const error = new Error('These credentials do not match our records.');
     error.statusCode = 400;
     throw error;
   }
+
+  // Check if user is active (matching Laravel logic)
+  if (!user.is_active) {
+    // Increment rate limiter for inactive account
+    RateLimiter.hit(throttleKey, 1);
+    const error = new Error('Your account has been deactivated. Please contact your administrator.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // Clear rate limiter on successful login
+  RateLimiter.clear(throttleKey);
  
   const expirationInSeconds = 24 * 60 * 60; // 24 hours in seconds
  
@@ -167,6 +194,7 @@ exports.login = async (email, password) => {
   );
  
   return {
+    success: true,
     user: userData,
     token,
     message: ErrorMessages.SUCCESS_LOGIN,

@@ -32,6 +32,7 @@ const route = Object.freeze({
   DASHBOARD: "/dashboard",
   TARTEEB_REQUESTS: "/tarteeb-requests",
   KHAT: "/khat",
+  RESPONSE_TEMPLATES: "/response-templates",
 });
 
 module.exports = { route };

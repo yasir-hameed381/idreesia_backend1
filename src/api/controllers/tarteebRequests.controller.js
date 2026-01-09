@@ -48,7 +48,44 @@ exports.getTarteebRequestById = async (req, res, next) => {
 
 exports.createTarteebRequest = async (req, res, next) => {
   try {
-    const result = await tarteebRequestsService.createTarteebRequest(req.body);
+    const { token, ...requestData } = req.body;
+
+    // If token is provided, validate it
+    if (token) {
+      const tokenValidation = await tarteebRequestsService.validatePublicLinkToken(token);
+      
+      if (!tokenValidation.success || !tokenValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: tokenValidation.message || "Invalid or expired token.",
+        });
+      }
+
+      // Use zone_id and mehfil_directory_id from token if not provided in request
+      if (tokenValidation.data.zone_id && !requestData.zone_id) {
+        requestData.zone_id = tokenValidation.data.zone_id;
+      }
+      if (tokenValidation.data.mehfil_directory_id && !requestData.mehfil_directory_id) {
+        requestData.mehfil_directory_id = tokenValidation.data.mehfil_directory_id;
+      }
+
+      // Create the request
+      const createResult = await tarteebRequestsService.createTarteebRequest(requestData);
+      
+      // Mark token as used after successful creation
+      if (createResult.success) {
+        await tarteebRequestsService.markTokenAsUsed(token);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Tarteeb request created successfully.",
+        data: createResult.data,
+      });
+    }
+
+    // Regular creation without token
+    const result = await tarteebRequestsService.createTarteebRequest(requestData);
 
     return res.status(201).json({
       success: true,
@@ -105,6 +142,79 @@ exports.deleteTarteebRequest = async (req, res, next) => {
     return res.status(200).json(result);
   } catch (error) {
     logger.error(`Error deleting tarteeb request: ${error.message}`);
+    return next(error);
+  }
+};
+
+exports.generatePublicLink = async (req, res, next) => {
+  try {
+    const { linkExpiryHours, zone_id, mehfil_directory_id } = req.body;
+    const createdBy = req.user?.id || null;
+
+    if (!linkExpiryHours || linkExpiryHours < 1 || linkExpiryHours > 720) {
+      return res.status(400).json({
+        success: false,
+        message: "Link expiry hours must be between 1 and 720.",
+      });
+    }
+
+    const result = await tarteebRequestsService.generatePublicLinkToken({
+      linkExpiryHours,
+      createdBy,
+      zoneId: zone_id || null,
+      mehfilDirectoryId: mehfil_directory_id || null,
+    });
+
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+
+    // Generate the public URL (use frontend URL from env or request origin)
+    const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
+    
+    // Include locale in the URL (default to 'en' if not specified)
+    const locale = process.env.DEFAULT_LOCALE || 'en';
+    const publicUrl = `${frontendUrl}/${locale}/tarteeb-request/form/${result.data.token}`;
+
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        token: result.data.token,
+        url: publicUrl,
+        expires_at: result.data.expires_at,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error generating public link: ${error.message}`, error.stack);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to generate public link",
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+};
+
+exports.validateToken = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        valid: false,
+        message: "Token is required.",
+      });
+    }
+
+    const result = await tarteebRequestsService.validatePublicLinkToken(token);
+
+    if (!result.success || !result.valid) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error validating token: ${error.message}`);
     return next(error);
   }
 };

@@ -1,5 +1,6 @@
 const httpStatus = require("http-status");
 const khatService = require("../services/khatService");
+const logger = require("../../config/logger");
 
 const buildRequestUrl = (req) => {
   if (!req) return "";
@@ -108,6 +109,69 @@ exports.deleteKhat = async (req, res, next) => {
     return res.status(httpStatus.OK).json(response);
   } catch (error) {
     return next(error);
+  }
+};
+
+exports.generatePublicLink = async (req, res, next) => {
+  try {
+    const { linkExpiryHours, zone_id, mehfil_directory_id } = req.body;
+    const createdBy = req.user?.id || null;
+
+    if (!linkExpiryHours || linkExpiryHours < 1 || linkExpiryHours > 720) {
+      return res.status(400).json({
+        success: false,
+        message: "Link expiry hours must be between 1 and 720.",
+      });
+    }
+
+    const result = await khatService.generatePublicLinkToken({
+      linkExpiryHours,
+      createdBy,
+      zoneId: zone_id || null,
+      mehfilDirectoryId: mehfil_directory_id || null,
+    });
+
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+
+    // Generate the public URL (use frontend URL from env or request origin)
+    const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
+    
+    // Include locale in the URL (default to 'en' if not specified)
+    const locale = process.env.DEFAULT_LOCALE || 'en';
+    const publicUrl = `${frontendUrl}/${locale}/khatoot/form/${result.data.token}`;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        token: result.data.token,
+        url: publicUrl,
+        expires_at: result.data.expires_at,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error generating public link: ${error.message}`, error.stack);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to generate public link",
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+};
+
+exports.validateToken = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const result = await khatService.validatePublicLinkToken(token);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error validating token: ${error.message}`, error.stack);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to validate token",
+    });
   }
 };
 

@@ -38,16 +38,32 @@ exports.login = async (req, res) => {
 
   if (!email || !password) {
     return res.status(400).json({
+      success: false,
       message: ErrorMessages.EMAIL_PASSWORD_REQUIRED,
     });
   }
 
   try {
-    const response = await authService.login(email, password);
+    // Get client IP address for rate limiting
+    const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || '127.0.0.1';
+    
+    const response = await authService.login(email, password, ipAddress);
     return res.status(200).json(response);
   } catch (error) {
     const statusCode = error.statusCode || 500;
+    
+    // Handle rate limiting error with additional details
+    if (statusCode === 429) {
+      return res.status(429).json({
+        success: false,
+        message: error.message,
+        seconds: error.seconds,
+        minutes: error.minutes,
+      });
+    }
+    
     return res.status(statusCode).json({
+      success: false,
       message: error.message || ErrorMessages.LOGIN_ERROR,
     });
   }
