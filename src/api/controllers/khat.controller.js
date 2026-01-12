@@ -212,6 +212,107 @@ exports.markTokenAsUsed = async (req, res, next) => {
       message: error.message || "Failed to mark token as used",
     });
   }
+}
+// Question management endpoints (similar to Laravel KhatView actions)
+exports.addQuestion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { question } = req.body;
+    const askedBy = req.user?.id || null;
+
+    if (!question || question.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Question must be at least 10 characters long.",
+      });
+    }
+
+    const result = await khatService.addQuestion(id, question, askedBy);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(201).json(result);
+  } catch (error) {
+    logger.error(`Error adding question: ${error.message}`);
+    return next(error);
+  }
+};
+
+exports.sendQuestions = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { question_ids } = req.body;
+    const askedBy = req.user?.id || null;
+
+    const result = await khatService.sendQuestions(id, question_ids, askedBy);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error sending questions: ${error.message}`);
+    return next(error);
+  }
+};
+
+exports.getQuestions = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await khatService.getQuestions(id);
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error fetching questions: ${error.message}`);
+    return next(error);
+  }
+};
+
+exports.deleteQuestion = async (req, res, next) => {
+  try {
+    const { questionId } = req.params;
+    const result = await khatService.deleteQuestion(questionId);
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error deleting question: ${error.message}`);
+    return next(error);
+  }
+};
+
+// Update jawab, status, jawab_links, and notes (similar to Laravel's save method)
+exports.updateJawab = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, jawab, jawab_links, notes } = req.body;
+
+    const result = await khatService.updateJawab(id, {
+      status,
+      jawab,
+      jawab_links,
+      notes,
+    });
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error updating khat jawab: ${error.message}`);
+    return next(error);
+  }
 };
 
 

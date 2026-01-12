@@ -244,7 +244,7 @@ module.exports = (sequelize) => {
         defaultValue: "khat",
       },
       status: {
-        type: DataTypes.ENUM("pending", "in-review", "closed"),
+        type: DataTypes.ENUM("pending", "in-review", "awaiting-response", "closed"),
         allowNull: false,
         defaultValue: "pending",
       },

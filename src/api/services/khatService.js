@@ -4,8 +4,10 @@ const { sequelize: db } = require("../../config/database");
 const { paginate, constructPagination } = require("./utilityServices");
 
 const KhatModel = require("../models/khat")(db);
+const KhatQuestionModel = require("../models/khatQuestions")(db);
 const zoneModel = require("../models/zone")(db);
 const mehfilDirectoryModel = require("../models/mehfil-directories")(db);
+const userModel = require("../models/user-admin")(db);
 
 const KHAT_FIELDS = [
   "zone_id",
@@ -86,6 +88,27 @@ const initializeAssociations = () => {
     KhatModel.belongsTo(mehfilDirectoryModel, {
       foreignKey: "mehfil_directory_id",
       as: "mehfilDirectory",
+    });
+  }
+
+  if (!KhatModel.associations?.questions) {
+    KhatModel.hasMany(KhatQuestionModel, {
+      foreignKey: "khat_id",
+      as: "questions",
+    });
+  }
+
+  if (!KhatQuestionModel.associations?.khat) {
+    KhatQuestionModel.belongsTo(KhatModel, {
+      foreignKey: "khat_id",
+      as: "khat",
+    });
+  }
+
+  if (!KhatQuestionModel.associations?.askedBy) {
+    KhatQuestionModel.belongsTo(userModel, {
+      foreignKey: "asked_by",
+      as: "askedBy",
     });
   }
 
@@ -220,6 +243,18 @@ exports.getKhatById = async (id) => {
           model: mehfilDirectoryModel,
           as: "mehfilDirectory",
           attributes: ["id", "mehfil_number", "name_en", "name_ur"],
+        },
+        {
+          model: KhatQuestionModel,
+          as: "questions",
+          include: [
+            {
+              model: userModel,
+              as: "askedBy",
+              attributes: ["id", "name", "email"],
+            },
+          ],
+          order: [["created_at", "ASC"]],
         },
       ],
     });
@@ -459,3 +494,244 @@ exports.markTokenAsUsed = async (token) => {
   }
 };
 
+// Question management methods (similar to Laravel KhatView actions)
+exports.addQuestion = async (khatId, question, askedBy = null) => {
+  try {
+    initializeAssociations();
+
+    // Validate khat exists
+    const khat = await KhatModel.findByPk(khatId);
+    if (!khat) {
+      return {
+        success: false,
+        message: "Khat record not found.",
+      };
+    }
+
+    // Validate question
+    if (!question || question.trim().length < 10) {
+      return {
+        success: false,
+        message: "Question must be at least 10 characters long.",
+      };
+    }
+
+    const khatQuestion = await KhatQuestionModel.create({
+      khat_id: khatId,
+      question: question.trim(),
+      asked_by: askedBy || null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    return {
+      success: true,
+      data: khatQuestion,
+      message: "Question added successfully.",
+    };
+  } catch (error) {
+    logger.error(`Error adding question: ${error.message}`);
+    throw error;
+  }
+};
+
+exports.sendQuestions = async (khatId, questionIds = null, askedBy = null) => {
+  try {
+    initializeAssociations();
+
+    const khat = await KhatModel.findByPk(khatId);
+    if (!khat) {
+      return {
+        success: false,
+        message: "Khat record not found.",
+      };
+    }
+
+    if (!khat.email) {
+      return {
+        success: false,
+        message: "Cannot send questions - no email address on file.",
+      };
+    }
+
+    // Get questions to send
+    let questions;
+    if (questionIds && Array.isArray(questionIds) && questionIds.length > 0) {
+      questions = await KhatQuestionModel.findAll({
+        where: {
+          khat_id: khatId,
+          id: questionIds,
+        },
+      });
+    } else {
+      // Get all unanswered questions
+      questions = await KhatQuestionModel.findAll({
+        where: {
+          khat_id: khatId,
+          answer: null,
+        },
+      });
+    }
+
+    if (questions.length === 0) {
+      return {
+        success: false,
+        message: "No questions to send.",
+      };
+    }
+
+    // Update asked_by for questions if provided
+    if (askedBy) {
+      await KhatQuestionModel.update(
+        { asked_by: askedBy, updated_at: new Date() },
+        {
+          where: {
+            khat_id: khatId,
+            id: questions.map((q) => q.id),
+          },
+        }
+      );
+    }
+
+    // Update khat status to awaiting_response
+    await KhatModel.update(
+      {
+        status: "awaiting_response",
+        updated_at: new Date(),
+      },
+      {
+        where: { id: khatId },
+      }
+    );
+
+    // TODO: Send email notification here (similar to Laravel's SendKhatQuestionEmail job)
+    // For now, we'll just return success
+
+    return {
+      success: true,
+      message: "Questions sent successfully.",
+      data: {
+        questionsCount: questions.length,
+        questions: questions,
+      },
+    };
+  } catch (error) {
+    logger.error(`Error sending questions: ${error.message}`);
+    throw error;
+  }
+};
+
+exports.getQuestions = async (khatId) => {
+  try {
+    initializeAssociations();
+
+    const khat = await KhatModel.findByPk(khatId);
+    if (!khat) {
+      return {
+        success: false,
+        message: "Khat record not found.",
+      };
+    }
+
+    const questions = await KhatQuestionModel.findAll({
+      where: { khat_id: khatId },
+      include: [
+        {
+          model: userModel,
+          as: "askedBy",
+          attributes: ["id", "name", "email"],
+        },
+      ],
+      order: [["created_at", "ASC"]],
+    });
+
+    return {
+      success: true,
+      data: questions,
+    };
+  } catch (error) {
+    logger.error(`Error fetching questions: ${error.message}`);
+    throw error;
+  }
+};
+
+exports.deleteQuestion = async (questionId) => {
+  try {
+    const deleted = await KhatQuestionModel.destroy({
+      where: { id: questionId },
+    });
+
+    if (!deleted) {
+      return {
+        success: false,
+        message: "Question not found or delete failed.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Question deleted successfully.",
+    };
+  } catch (error) {
+    logger.error(`Error deleting question: ${error.message}`);
+    throw error;
+  }
+};
+
+// Update jawab, status, jawab_links, and notes (similar to Laravel's save method)
+exports.updateJawab = async (khatId, { status, jawab, jawab_links, notes }) => {
+  try {
+    const khat = await KhatModel.findByPk(khatId);
+    if (!khat) {
+      return {
+        success: false,
+        message: "Khat record not found.",
+      };
+    }
+
+    const updateData = {
+      updated_at: new Date(),
+    };
+
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+
+    if (jawab !== undefined) {
+      updateData.jawab = jawab;
+    }
+
+    if (jawab_links !== undefined) {
+      // Filter out empty links (similar to Laravel)
+      const filteredLinks = Array.isArray(jawab_links)
+        ? jawab_links.filter(
+            (link) => link && link.title && link.url && link.title.trim() && link.url.trim()
+          )
+        : null;
+      updateData.jawab_links = filteredLinks;
+    }
+
+    if (notes !== undefined) {
+      updateData.notes = notes;
+    }
+
+    const [affectedRows] = await KhatModel.update(updateData, {
+      where: { id: khatId },
+    });
+
+    if (!affectedRows) {
+      return {
+        success: false,
+        message: "Failed to update khat.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Khat updated successfully.",
+    };
+  } catch (error) {
+    logger.error(`Error updating khat jawab: ${error.message}`);
+    throw error;
+  }
+};
