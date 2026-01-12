@@ -12,6 +12,7 @@ router.route("/generate-public-link").post(
   controller.generatePublicLink
 );
 router.route("/validate-token/:token").get(controller.validateToken);
+router.route("/mark-token-used").post(controller.markTokenAsUsed);
 router.route("/:id").get(controller.getKhatById);
 router.route("/:id").delete(controller.deleteKhat);
 router.route("/:id/status").patch(controller.updateKhatStatus);

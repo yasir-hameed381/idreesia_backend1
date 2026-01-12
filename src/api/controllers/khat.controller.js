@@ -59,6 +59,24 @@ exports.getKhatById = async (req, res, next) => {
 
 exports.createKhat = async (req, res, next) => {
   try {
+    // Check if this is a public form submission with token
+    const token = req.headers["x-khat-form-token"];
+    if (token) {
+      // Validate token before creating khat
+      const tokenValidation = await khatService.validatePublicLinkToken(token);
+      if (!tokenValidation.success || !tokenValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: tokenValidation.message || "Invalid or expired token",
+        });
+      }
+      
+      // Mark token as used after successful creation
+      const response = await khatService.createKhat(req.body);
+      await khatService.markTokenAsUsed(token);
+      return res.status(httpStatus.CREATED).json(response);
+    }
+    
     const response = await khatService.createKhat(req.body);
     return res.status(httpStatus.CREATED).json(response);
   } catch (error) {
@@ -171,6 +189,27 @@ exports.validateToken = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to validate token",
+    });
+  }
+};
+
+exports.markTokenAsUsed = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Token is required",
+      });
+    }
+    
+    const result = await khatService.markTokenAsUsed(token);
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Error marking token as used: ${error.message}`, error.stack);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to mark token as used",
     });
   }
 };
