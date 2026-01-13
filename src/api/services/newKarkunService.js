@@ -41,30 +41,61 @@ exports.getKarkuns = async ({
   page = 1,
   size = 50,
   search = "",
+  zone_id,
+  mehfil_directory_id,
   requestUrl = "",
 }) => {
   try {
-    const searchFields = [
-      SearchFields.NAME,
-      SearchFields.FATHER_NAME,
-      SearchFields.MARFAT,
-      SearchFields.PHONE_NO,
-    ];
-
     const { offset, limit, currentPage } = await paginate({ page, size });
 
-    const where = {};
+    // Build conditions array for proper AND/OR combination
+    const conditions = [];
 
-    if (search && searchFields.length > 0) {
-      where[Op.or] = searchFields.map((field) => ({
-        [field]: { [Op.like]: `%${search}%` },
-      }));
+    // Add search conditions
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      const searchConditions = [
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { father_name: { [Op.like]: `%${searchTerm}%` } },
+        { marfat: { [Op.like]: `%${searchTerm}%` } },
+        { phone_number: { [Op.like]: `%${searchTerm}%` } },
+      ];
+
+      // Also try exact numeric match for ID if search term is a number
+      const searchNum = parseInt(searchTerm);
+      if (!isNaN(searchNum)) {
+        searchConditions.push({ id: searchNum });
+      }
+
+      if (searchConditions.length > 0) {
+        conditions.push({ [Op.or]: searchConditions });
+      }
     }
+
+    // Add zone filter
+    if (zone_id && zone_id.trim()) {
+      const zoneIdNum = parseInt(zone_id);
+      if (!isNaN(zoneIdNum)) {
+        conditions.push({ zone_id: zoneIdNum });
+      }
+    }
+
+    // Add mehfil directory filter
+    if (mehfil_directory_id && mehfil_directory_id.trim()) {
+      const mehfilIdNum = parseInt(mehfil_directory_id);
+      if (!isNaN(mehfilIdNum)) {
+        conditions.push({ mehfil_directory_id: mehfilIdNum });
+      }
+    }
+
+    // Build final where clause
+    const where = conditions.length > 0 ? { [Op.and]: conditions } : {};
 
     const { count, rows: data } = await newKarkunModel.findAndCountAll({
       where,
       offset,
       limit,
+      order: [["id", "DESC"]],
     });
 
     const { links, meta } = constructPagination({

@@ -4,7 +4,7 @@ const adminUsersService = require("../services/adminUsersService");
 exports.getAdminUsers = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search, sortField, sortDirection } = req.query;
+    const { page, size, search, sortField, sortDirection, zone_id, mehfil_directory_id, activeTab } = req.query;
     const result = await adminUsersService.getuserAdmins({
       page,
       size,
@@ -12,6 +12,9 @@ exports.getAdminUsers = async (req, res, next) => {
       sortField,
       sortDirection,
       requestUrl,
+      zone_id,
+      mehfil_directory_id,
+      activeTab,
     });
     return res.json(result);
   } catch (error) {

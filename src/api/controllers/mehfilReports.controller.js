@@ -71,12 +71,16 @@ exports.createMehfilReport = async (req, res, next) => {
 exports.getMehfilReports = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search } = req.query;
+    const { page, size, search, zone, month, year, mehfil_directory_id } = req.query;
 
     const result = await mehfilReportsService.getMehfilReports({
       page,
       size,
       search,
+      zone_id: zone,
+      report_month: month,
+      report_year: year,
+      mehfil_directory_id,
       requestUrl,
     });
 

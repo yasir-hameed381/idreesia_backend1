@@ -22,13 +22,15 @@ exports.createTabarukat = async (req, res) => {
 // Get Tabarukat (with pagination & search)
 exports.getTabarukat = async (req, res) => {
   try {
-    const { page, size, search } = req.query;
+    const { page, size, search, zone_id, mehfil_directory_id } = req.query;
     const requestUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
 
     const result = await tabarukatService.getTabarukat({
       page,
       size,
       search,
+      zone_id,
+      mehfil_directory_id,
       requestUrl,
     });
 

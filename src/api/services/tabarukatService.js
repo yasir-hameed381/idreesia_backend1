@@ -36,11 +36,13 @@ exports.createTabarukat = async ({
   }
 };  
 
-// Get Tabarukat with Pagination + Search
+// Get Tabarukat with Pagination + Search + Filters
 exports.getTabarukat = async ({
   page = 1,
   size = 50,
   search = "",
+  zone_id,
+  mehfil_directory_id,
   requestUrl = "",
 }) => {
   try {
@@ -55,10 +57,27 @@ exports.getTabarukat = async ({
 
     const where = {};
 
-    if (search && searchFields.length > 0) {
+    // Search filter
+    if (search && search.trim() && searchFields.length > 0) {
       where[Op.or] = searchFields.map((field) => ({
-        [field]: { [Op.like]: `%${search}%` },
+        [field]: { [Op.like]: `%${search.trim()}%` },
       }));
+    }
+
+    // Zone filter
+    if (zone_id && zone_id.trim()) {
+      const zoneIdNum = parseInt(zone_id);
+      if (!isNaN(zoneIdNum)) {
+        where.zone_id = zoneIdNum;
+      }
+    }
+
+    // Mehfil directory filter
+    if (mehfil_directory_id && mehfil_directory_id.trim()) {
+      const mehfilId = parseInt(mehfil_directory_id);
+      if (!isNaN(mehfilId)) {
+        where.mehfil_directory_id = mehfilId;
+      }
     }
 
     const { count, rows: data } = await tabarukatModel.findAndCountAll({

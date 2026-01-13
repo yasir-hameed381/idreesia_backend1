@@ -4,58 +4,145 @@ const { sequelize: db } = require("../../config/database");
 const adminUsersModel = require("../models/user-admin")(db);
 const modelHasRolesModel = require("../models/modelHasRoles")(db);
 const rolesModel = require("../models/roles")(db);
+const zoneModel = require("../models/zone")(db);
+const mehfilDirectoryModel = require("../models/mehfil-directories")(db);
 const { paginate, constructPagination } = require("./utilityServices");
 const { SearchFields } = require("../Enums/searchEnums");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = 10;
 
-// Set up associations
-adminUsersModel.belongsToMany(rolesModel, {
-  through: {
-    model: modelHasRolesModel,
-    unique: false,
-  },
-  foreignKey: "model_id",
-  otherKey: "role_id",
-  as: "roles",
-  constraints: false,
-});
+// Initialize associations if not already set up
+let associationsInitialized = false;
+
+const initializeAssociations = () => {
+  if (associationsInitialized) {
+    return;
+  }
+
+  // Set up many-to-many relationship with roles
+  if (!adminUsersModel.associations?.roles) {
+    adminUsersModel.belongsToMany(rolesModel, {
+      through: {
+        model: modelHasRolesModel,
+        unique: false,
+      },
+      foreignKey: "model_id",
+      otherKey: "role_id",
+      as: "roles",
+      constraints: false,
+    });
+  }
+
+  // Set up belongsTo relationship with zone
+  if (!adminUsersModel.associations?.zone) {
+    adminUsersModel.belongsTo(zoneModel, {
+      foreignKey: "zone_id",
+      as: "zone",
+    });
+  }
+
+  // Set up belongsTo relationship with mehfilDirectory
+  if (!adminUsersModel.associations?.mehfilDirectory) {
+    adminUsersModel.belongsTo(mehfilDirectoryModel, {
+      foreignKey: "mehfil_directory_id",
+      as: "mehfilDirectory",
+    });
+  }
+
+  // Note: Self-referential relationships (creator/updater) are handled separately
+  // in the query to avoid SQL alias conflicts with multiple includes of the same model
+
+  associationsInitialized = true;
+};
 
 exports.getuserAdmins = async ({
   page = 1,
   size = 50,
   search = "",
-  sortField = "id",
-  sortDirection = "ASC",
+  sortField = "created_at",
+  sortDirection = "DESC",
   requestUrl = "",
+  zone_id = null,
+  mehfil_directory_id = null,
+  activeTab = null,
 }) => {
   try {
-    const searchFields = [
-      SearchFields.NAME,
-      SearchFields.ZONE_ID,
-      SearchFields.FATHERNAME,
-      SearchFields.BIRTH_YEAR,
-      SearchFields.EHAD_YEAR,
-      SearchFields.DUTY_TYPE,
-    ];
+    // Initialize associations before querying
+    initializeAssociations();
+
     // Use the pagination service to calculate offset, limit, and currentPage based on the given page and size
     const { offset, limit, currentPage } = await paginate({ page, size });
 
     // Initialize the 'where' object for query conditions
     const where = {};
 
-    // Add search condition if 'search' is provided and there are fields to search in
-    if (search && searchFields.length > 0) {
-      console.log("searching", search);
-      // Dynamically generate a WHERE clause for the search fields using Sequelize's Op.like operator
-      where[Op.or] = searchFields.map((field) => ({
-        [field]: { [Op.like]: `%${search}%` }, // Perform a LIKE search with the search keyword
-      }));
+    // Exclude super admins (like Laravel does)
+    where.is_super_admin = false;
+    
+    logger.info("Fetching admin users with filters:", {
+      page,
+      size,
+      search,
+      sortField,
+      sortDirection,
+      zone_id,
+      mehfil_directory_id,
+      activeTab,
+    });
+
+    // Add tab filtering (matching Laravel logic)
+    if (activeTab) {
+      switch (activeTab) {
+        case "karkun":
+          where.user_type = "karkun";
+          break;
+        case "ehad_karkun":
+          where.user_type = "ehad_karkun";
+          break;
+        case "mehfil_admin":
+          where.is_mehfil_admin = true;
+          break;
+        case "zone_admin":
+          where.is_zone_admin = true;
+          break;
+        case "region_admin":
+          where.is_region_admin = true;
+          where.is_all_region_admin = false;
+          break;
+        case "all_region_admin":
+          where.is_all_region_admin = true;
+          break;
+      }
     }
 
-    // Validate and normalize sort field
+    // Add zone filter
+    if (zone_id) {
+      const zoneIdNum = parseInt(zone_id, 10);
+      if (!isNaN(zoneIdNum)) {
+        where.zone_id = zoneIdNum;
+      }
+    }
+
+    // Add mehfil directory filter
+    if (mehfil_directory_id) {
+      const mehfilIdNum = parseInt(mehfil_directory_id, 10);
+      if (!isNaN(mehfilIdNum)) {
+        where.mehfil_directory_id = mehfilIdNum;
+      }
+    }
+
+    // Add search condition if 'search' is provided (matching Laravel: name and email)
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      where[Op.or] = [
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { email: { [Op.like]: `%${searchTerm}%` } },
+      ];
+    }
+
+    // Validate and normalize sort field (matching Laravel: name, email, created_at)
     const sortableFields = ["id", "name", "email", "created_at", "updated_at"];
-    const normalizedSortField = sortableFields.includes(sortField) ? sortField : "id";
+    const normalizedSortField = sortableFields.includes(sortField) ? sortField : "created_at";
     const normalizedSortDirection = 
       typeof sortDirection === "string" && sortDirection.toUpperCase() === "DESC" 
         ? "DESC" 
@@ -65,6 +152,7 @@ exports.getuserAdmins = async ({
     // - 'where' specifies the filtering conditions
     // - 'offset' skips a certain number of records for pagination
     // - 'limit' limits the number of records retrieved
+    // Note: Using separate queries for creator/updater to avoid SQL alias conflicts
     const { count, rows: data } = await adminUsersModel.findAndCountAll({
       where,
       offset,
@@ -78,10 +166,65 @@ exports.getuserAdmins = async ({
           through: { attributes: [] }, // Hide junction table fields
           required: false,
         },
+        {
+          model: zoneModel,
+          as: "zone",
+          attributes: ["id", "title_en", "title_ur"],
+          required: false,
+        },
+        {
+          model: mehfilDirectoryModel,
+          as: "mehfilDirectory",
+          attributes: ["id", "name_en", "name_ur", "city_en"],
+          required: false,
+        },
       ],
     });
 
-    console.log("rowsss", data);
+    // Fetch creator and updater information separately to avoid SQL alias conflicts
+    const userIds = [...new Set([
+      ...data.map((user) => user.created_by).filter(Boolean),
+      ...data.map((user) => user.updated_by).filter(Boolean),
+    ])];
+
+    let creatorsMap = {};
+    let updatersMap = {};
+
+    if (userIds.length > 0) {
+      const creatorUpdaters = await adminUsersModel.findAll({
+        where: {
+          id: userIds,
+        },
+        attributes: ["id", "name"],
+        raw: true,
+      });
+
+      creatorUpdaters.forEach((user) => {
+        if (user.id) {
+          creatorsMap[user.id] = { id: user.id, name: user.name };
+          updatersMap[user.id] = { id: user.id, name: user.name };
+        }
+      });
+    }
+
+    logger.info(`Found ${count} total users, returning ${data.length} records`);
+
+    // Convert Sequelize instances to plain objects and add creator/updater info
+    const plainData = data.map((user) => {
+      const userData = user.get({ plain: true });
+      
+      // Add creator information if available
+      if (userData.created_by && creatorsMap[userData.created_by]) {
+        userData.creator = creatorsMap[userData.created_by];
+      }
+      
+      // Add updater information if available
+      if (userData.updated_by && updatersMap[userData.updated_by]) {
+        userData.updater = updatersMap[userData.updated_by];
+      }
+      
+      return userData;
+    });
 
     const { links, meta } = constructPagination({
       count,
@@ -95,7 +238,7 @@ exports.getuserAdmins = async ({
     // - 'data' contains the rows retrieved from the database
     // - 'pagination' includes the current page, total pages, and total number of items
     return {
-      data,
+      data: plainData,
       links,
       meta,
     };
