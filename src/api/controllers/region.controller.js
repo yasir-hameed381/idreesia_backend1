@@ -4,11 +4,13 @@ const regionService = require("../services/regionsService");
 exports.getRegions = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search } = req.query;
+    const { page, size, search, sortField, sortDirection } = req.query;
     const result = await regionService.getRegions({
       page,
       size,
       search,
+      sortField,
+      sortDirection,
       requestUrl,
     });
     return res.json(result);

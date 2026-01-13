@@ -58,7 +58,7 @@ module.exports = (sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
-      mehfil_directory_id: {
+      c: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
       },

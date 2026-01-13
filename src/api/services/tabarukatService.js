@@ -47,6 +47,8 @@ exports.getTabarukat = async ({
     const searchFields = [
       SearchFields.NAME,
       SearchFields.DESCRIPTION,
+      SearchFields.zone_id,
+      SearchFields.mehfil_directory_id,
     ];
 
     const { offset, limit, currentPage } = await paginate({ page, size });

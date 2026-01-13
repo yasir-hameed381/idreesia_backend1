@@ -25,6 +25,8 @@ exports.getuserAdmins = async ({
   page = 1,
   size = 50,
   search = "",
+  sortField = "id",
+  sortDirection = "ASC",
   requestUrl = "",
 }) => {
   try {
@@ -51,6 +53,14 @@ exports.getuserAdmins = async ({
       }));
     }
 
+    // Validate and normalize sort field
+    const sortableFields = ["id", "name", "email", "created_at", "updated_at"];
+    const normalizedSortField = sortableFields.includes(sortField) ? sortField : "id";
+    const normalizedSortDirection = 
+      typeof sortDirection === "string" && sortDirection.toUpperCase() === "DESC" 
+        ? "DESC" 
+        : "ASC";
+
     // Query the database using Sequelize's findAndCountAll method
     // - 'where' specifies the filtering conditions
     // - 'offset' skips a certain number of records for pagination
@@ -59,6 +69,7 @@ exports.getuserAdmins = async ({
       where,
       offset,
       limit,
+      order: [[normalizedSortField, normalizedSortDirection]],
       include: [
         {
           model: rolesModel,

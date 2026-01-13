@@ -10,6 +10,8 @@ exports.getRegions = async ({
   page = 1,
   size = 50,
   search = "",
+  sortField = "id",
+  sortDirection = "ASC",
   requestUrl = "",
 }) => {
   try {
@@ -32,6 +34,14 @@ exports.getRegions = async ({
       }));
     }
 
+    // Validate and normalize sort field
+    const sortableFields = ["id", "name", "co", "created_at", "updated_at"];
+    const normalizedSortField = sortableFields.includes(sortField) ? sortField : "id";
+    const normalizedSortDirection = 
+      typeof sortDirection === "string" && sortDirection.toUpperCase() === "DESC" 
+        ? "DESC" 
+        : "ASC";
+
     // Query the database using Sequelize's findAndCountAll method
     // - 'where' specifies the filtering conditions
     // - 'offset' skips a certain number of records for pagination
@@ -40,7 +50,7 @@ exports.getRegions = async ({
       where,
       offset,
       limit,
-      order: [["id", "ASC"]],
+      order: [[normalizedSortField, normalizedSortDirection]],
     });
 
     const { links, meta } = constructPagination({
