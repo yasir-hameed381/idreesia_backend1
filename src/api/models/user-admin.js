@@ -58,10 +58,6 @@ module.exports = (sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
-      c: {
-        type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: true,
-      },
       duty_days: {
         type: DataTypes.JSON,
         allowNull: true,
