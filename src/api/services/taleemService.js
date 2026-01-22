@@ -4,29 +4,14 @@ const {sequelize: db} = require('../../config/database')
 const taleemModel = require("../models/taleem")(db);
 const {paginate,constructPagination} = require('../services/utilityServices')
 const { SearchFields } = require('../Enums/searchEnums');
-const { Category } = require('../Enums/catgoryEnums');
+
 
 
 exports.getTaleem = async ({ page = 1, size = 25, category = '', search = '',requestUrl='' }) => {
   try {
 
-    const allowedCategories = [
-      Category.ALL_TALEEMAT,
-      Category.BASIC_TALEEMAT,
-      Category.QURAN_RECITATIONS,
-      Category.DUA_MUBARAK,
-      Category.AZAN,
-      Category.NEW_DAILY_TALEEM,
-      Category.SHORT_TALEEMAT,
-    ]; // Allowed category values
 
-    // Validate the category parameter (empty string is allowed, treated as 'all')
-    if (category && !allowedCategories.includes(category.toLowerCase())) {
-      return {
-        success: false,
-        error: `Invalid category. Allowed categories are: ${allowedCategories.join(',')}`,
-      };
-    }
+    
 
     const searchFields = [
           SearchFields.TITLE_EN,

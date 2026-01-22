@@ -17,21 +17,7 @@ exports.getNaatShareefs = async ({
   requestUrl = "",
 }) => {
   try {
-    const allowedCategories = [
-      Category.ALL_NAAT_SHAREEF,
-      Category.NEW_NAAT_SHAREEF,
-      Category.OLD_NAAT_SHAREEF,
-    ]; // Allowed category values
 
-    // Validate the category parameter (empty string is allowed, treated as 'all')
-    if (category && !allowedCategories.includes(category.toLowerCase())) {
-      return {
-        success: false,
-        error: `Invalid category. Allowed categories are: ${allowedCategories.join(
-          ","
-        )}`,
-      };
-    }
 
     const searchFields = [
       SearchFields.TITLE_EN,
@@ -40,42 +26,44 @@ exports.getNaatShareefs = async ({
       SearchFields.FILEPATH,
       SearchFields.TRACK,
       SearchFields.CREATED_AT,
+      SearchFields.ID,
+      SearchFields.SLUG,
     ];
 
     const { offset, limit, currentPage } = await paginate({ page, size });
 
     const where = {};
 
-    // if (search && searchFields.length > 0) {
-    //   where[Op.or] = searchFields.map((field) => ({
-    //     [field]: { [Op.like]: `%${search}%` },
-    //   }));
-    // }
+    if (search && searchFields.length > 0) {
+      where[Op.or] = searchFields.map((field) => ({
+        [field]: { [Op.like]: `%${search}%` },
+      }));
+    }
 
     if (category && category.toLowerCase() !== "all") {
       where.category_id = category;
     }
 
-    const isDateSearch = !isNaN(Date.parse(search));
-    console.log("isDateSearch,isDateSearch", isDateSearch);
-    if (search && searchFields.length > 0) {
-      where[Op.or] = searchFields.map((field) => {
-        if (field === SearchFields.CREATED_AT && isDateSearch) {
-          const start = new Date(search);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 1);
-          return {
-            [field]: {
-              [Op.between]: [start, end],
-            },
-          };
-        } else {
-          return {
-            [field]: { [Op.like]: `%${search}%` },
-          };
-        }
-      });
-    }
+    // const isDateSearch = !isNaN(Date.parse(search));
+    // console.log("isDateSearch,isDateSearch", isDateSearch);
+    // if (search && searchFields.length > 0) {
+    //   where[Op.or] = searchFields.map((field) => {
+    //     if (field === SearchFields.CREATED_AT && isDateSearch) {
+    //       const start = new Date(search);
+    //       const end = new Date(start);
+    //       end.setDate(start.getDate() + 1);
+    //       return {
+    //         [field]: {
+    //           [Op.between]: [start, end],
+    //         },
+    //       };
+    //     } else {
+    //       return {
+    //         [field]: { [Op.like]: `%${search}%` },
+    //       };
+    //     }
+    //   });
+    // }
 
     const { count, rows: data } = await naatModel.findAndCountAll({
       where,

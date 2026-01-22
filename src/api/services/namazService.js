@@ -60,15 +60,28 @@ exports.getNamazTimings = async ({ page = 1, size = 50, search = '',requestUrl='
 };
 
 
-exports.createNamazTiming = async ({ namaz_name ,namaz_time }) => {
+exports.createNamazTiming = async ({ fajr, 
+      dhuhr, 
+      jumma, 
+      asr, 
+      maghrib, 
+      isha, 
+      description_en, 
+      description_ur, }) => {
   try {
-    const createZonePayload = {
-      namaz_name,
-      namaz_time,
+    const createNamazPayload = {
+      fajr, 
+      dhuhr, 
+      jumma, 
+      asr, 
+      maghrib, 
+      isha, 
+      description_en, 
+      description_ur,
       created_at: new Date(),
     };
 
-    return await namazModel.create(createZonePayload);
+    return await namazModel.create(createNamazPayload);
   } catch (error) {
     logger.error(`Error creating namaz time: ${error.message}`);
     throw new Error(`Failed to create namaz time: ${error.message}`);
@@ -76,7 +89,14 @@ exports.createNamazTiming = async ({ namaz_name ,namaz_time }) => {
 };
 
 
-exports.updateNamazTiming = async ({id ,namaz_name , namaz_time}) => {
+exports.updateNamazTiming = async ({id ,fajr, 
+      dhuhr, 
+      jumma, 
+      asr, 
+      maghrib, 
+      isha, 
+      description_en, 
+      description_ur}) => {
   try {
     const namazCheck = await namazModel.findByPk(id);
       if (!namazCheck) {
@@ -86,13 +106,19 @@ exports.updateNamazTiming = async ({id ,namaz_name , namaz_time}) => {
         }
       }
 
-    const updateTagPayload = {
-      namaz_name,
-      namaz_time,
+    const updateNamazPayload = {
+      fajr, 
+      dhuhr, 
+      jumma, 
+      asr, 
+      maghrib, 
+      isha, 
+      description_en, 
+      description_ur,
       updated_at : new Date()
     }
 
-    await namazCheck.update(updateTagPayload, { where: { id: id } });
+    await namazCheck.update(updateNamazPayload, { where: { id: id } });
     return {
       success: true,
       message: 'namaz time updated successfully',
@@ -114,6 +140,7 @@ exports.deleteNamazTiming = async (id) => {
       };
     }
 
+    
     const namaz = await namazModel.findByPk(id);
     if (!namaz) {
       return {

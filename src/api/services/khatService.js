@@ -514,9 +514,7 @@ exports.addQuestion = async (khatId, question, askedBy = null) => {
         success: false,
         message: "Question must be at least 10 characters long.",
       };
-    }
-
-    const khatQuestion = await KhatQuestionModel.create({
+    }    const khatQuestion = await KhatQuestionModel.create({
       khat_id: khatId,
       question: question.trim(),
       asked_by: askedBy || null,
@@ -545,9 +543,7 @@ exports.sendQuestions = async (khatId, questionIds = null, askedBy = null) => {
         success: false,
         message: "Khat record not found.",
       };
-    }
-
-    if (!khat.email) {
+    }    if (!khat.email) {
       return {
         success: false,
         message: "Cannot send questions - no email address on file.",
@@ -591,9 +587,7 @@ exports.sendQuestions = async (khatId, questionIds = null, askedBy = null) => {
           },
         }
       );
-    }
-
-    // Update khat status to awaiting_response
+    }    // Update khat status to awaiting_response
     await KhatModel.update(
       {
         status: "awaiting_response",

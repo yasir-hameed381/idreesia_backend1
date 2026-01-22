@@ -4,11 +4,11 @@ const mehfilsService = require("../services/mehfilsService");
 exports.getMehfils = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search, startDate, endDate } = req.query;
+    const { page, limit, search, startDate, endDate } = req.query;
 
     const result = await mehfilsService.getMehfils({
       page,
-      size,
+      limit,
       search,
       startDate,
       endDate,
@@ -36,6 +36,9 @@ exports.createMahfil = async (req, res, next) => {
       date,
       is_published,
       old,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
       created_by,
     } = req.body;
 
@@ -75,6 +78,9 @@ exports.createMahfil = async (req, res, next) => {
       date,
       is_published,
       old,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
       created_by,
     });
     return res.status(201).json({
@@ -104,6 +110,9 @@ exports.updateMehfil = async (req, res, next) => {
       date,
       is_published,
       old,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
       updated_by,
     } = req.body;
 
@@ -147,6 +156,9 @@ exports.updateMehfil = async (req, res, next) => {
       date,
       is_published,
       old,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
       updated_by,
     });
 

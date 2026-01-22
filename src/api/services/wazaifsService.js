@@ -11,7 +11,7 @@ const { SearchFields } = require("../Enums/searchEnums");
 // Function to get Wazaifs data with pagination, filtering, and search capabilities
 exports.getWazaifs = async ({
   page = 1,
-  size = 100,
+  limit = 25,
   category = "",
   search = "",
   requestUrl = "",
@@ -22,12 +22,16 @@ exports.getWazaifs = async ({
       SearchFields.TITLE_EN,
       SearchFields.TITLE_UR,
       SearchFields.DESCRIPTION,
-      'description_en', // Add description_en field
+      "description_en",
       SearchFields.SLUG,
     ];
 
     // Calculate pagination parameters (offset and limit) and derive the current page
-    const { offset, limit, currentPage } = await paginate({ page, size });
+    const {
+      offset,
+      limit: qLimit,
+      currentPage,
+    } = await paginate({ page, size: limit });
 
     // Initialize the 'where' condition for the query
     const where = {};
@@ -35,53 +39,50 @@ exports.getWazaifs = async ({
     // Add search conditions if a search query is provided
     if (search && searchFields.length > 0) {
       where[Op.or] = searchFields.map((field) => ({
-        [field]: { [Op.like]: `%${search}%` }, // Partial match using SQL's LIKE operator
+        [field]: { [Op.like]: `%${search}%` },
       }));
     }
 
     // Add a category filter if a category is specified
-    // Support both 'category' (enum value) and 'category_id' (legacy)
-    if (category && category !== 'all') {
-      // Check if category is a valid enum value (bunyadi, notice_board_taleem, parhaiyan, wazaif)
-      const validCategories = ['bunyadi', 'notice_board_taleem', 'parhaiyan', 'wazaif'];
+    if (category && category !== "all") {
+      const validCategories = [
+        "bunyadi",
+        "notice_board_taleem",
+        "parhaiyan",
+        "wazaif",
+      ];
       if (validCategories.includes(category.toLowerCase())) {
         where.category = category.toLowerCase();
       } else {
-        // Fallback to category_id for backward compatibility
         where.category_id = category;
       }
     }
-
-    // Add is_published filter - only show published wazaifs
-    where.is_published = 1;
 
     // Fetch data from the Wazaifs model with the specified conditions and pagination
     const { count, rows: data } = await wazaifsModel.findAndCountAll({
       where,
       offset,
-      limit,
-      order: [['created_at', 'DESC']], // Default ordering
+      limit: qLimit,
+      order: [["created_at", "DESC"]],
     });
 
     // Construct pagination links and metadata for the response
     const { links, meta } = constructPagination({
       count,
-      limit,
+      limit: qLimit,
       offset,
       currentPage,
       baseUrl: requestUrl,
     });
 
-    // Return the fetched data along with pagination details
     return {
       data,
       links,
       meta,
     };
   } catch (error) {
-    // Log the error message for debugging purposes
     logger.error("Error fetching wazaifs: " + error.message);
-    throw error; // Re-throw the error so the controller can handle it properly
+    throw error;
   }
 };
 
@@ -90,7 +91,15 @@ exports.createWazaifShareef = async ({
   title_en,
   title_ur,
   description,
+  description_en,
   images,
+  category,
+  is_published,
+  is_admin_favorite,
+  is_for_karkun,
+  is_for_ehad_karkun,
+  is_sticky,
+  wazaif_number,
   created_by,
 }) => {
   try {
@@ -99,9 +108,17 @@ exports.createWazaifShareef = async ({
       title_en,
       title_ur,
       description,
+      description_en,
       images,
+      category,
+      is_published,
+      is_admin_favorite,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
+      wazaif_number,
       created_at: new Date(),
-      created_by: created_by,
+      created_by,
     };
 
     return await wazaifsModel.create(createWazaifPayload);
@@ -117,7 +134,15 @@ exports.updateWazaifShareef = async ({
   title_en,
   title_ur,
   description,
+  description_en,
   images,
+  category,
+  is_published,
+  is_admin_favorite,
+  is_for_karkun,
+  is_for_ehad_karkun,
+  is_sticky,
+  wazaif_number,
   updated_by,
 }) => {
   try {
@@ -134,9 +159,17 @@ exports.updateWazaifShareef = async ({
       title_en,
       title_ur,
       description,
+      description_en,
       images,
+      category,
+      is_published,
+      is_admin_favorite,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
+      wazaif_number,
       updated_at: new Date(),
-      updated_by: updated_by,
+      updated_by,
     };
 
     await wazaifsModel.update(updateWazaifPayload, { where: { id } });

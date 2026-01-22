@@ -42,12 +42,22 @@ const wazaifsSchema = sequelize.define('wazaifs', {
     allowNull: false,
     defaultValue: 1,
   },
+  is_admin_favorite: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
   is_for_karkun: {
     type: DataTypes.TINYINT(1),
     allowNull: false,
     defaultValue: 0,
   },
   is_for_ehad_karkun: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  is_sticky: {
     type: DataTypes.TINYINT(1),
     allowNull: false,
     defaultValue: 0,

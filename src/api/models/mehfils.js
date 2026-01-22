@@ -48,6 +48,21 @@ const mehfilsSchema = sequelize.define('mehfils', {
     allowNull: false,
     defaultValue: 0,
   },
+  is_for_karkun: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  is_for_ehad_karkun: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  is_sticky: {
+    type: DataTypes.TINYINT(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
   filename: {
     type: DataTypes.STRING(255),
     allowNull: false,

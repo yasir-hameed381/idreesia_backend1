@@ -10,7 +10,7 @@ const { SearchFields } = require("../Enums/searchEnums");
 
 exports.getMehfils = async ({
   page = 1,
-  size = 25,
+  limit = 25,
   search = "",
   startDate,
   endDate,
@@ -31,7 +31,7 @@ exports.getMehfils = async ({
     ];
 
     // Use the pagination service to calculate offset, limit, and currentPage based on the given page and size
-    const { offset, limit, currentPage } = await paginate({ page, size });
+    const { offset, limit: qLimit, currentPage } = await paginate({ page, size: limit });
 
     // Initialize the 'where' object for query conditions
     const where = {};
@@ -71,7 +71,7 @@ exports.getMehfils = async ({
     const { count, rows: data } = await mehfilsModel.findAndCountAll({
       where,
       offset,
-      limit,
+      limit: qLimit,
       order: [
         ["date", "DESC"], // Primary sort: newest date first
         ["created_at", "DESC"], // Secondary sort: newest created first
@@ -80,7 +80,7 @@ exports.getMehfils = async ({
 
     const { links, meta } = constructPagination({
       count,
-      limit,
+      limit: qLimit,
       offset,
       currentPage,
       baseUrl: requestUrl,
@@ -114,6 +114,9 @@ exports.createMehfil = async ({
   date,
   is_published,
   old,
+  is_for_karkun,
+  is_for_ehad_karkun,
+  is_sticky,
   created_by,
 }) => {
   try {
@@ -130,6 +133,9 @@ exports.createMehfil = async ({
       date,
       is_published,
       old,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
       created_at: new Date(),
       created_by: created_by,
     };
@@ -155,6 +161,9 @@ exports.updateMehfil = async ({
   date,
   is_published,
   old,
+  is_for_karkun,
+  is_for_ehad_karkun,
+  is_sticky,
   updated_by,
 }) => {
   try {
@@ -180,6 +189,9 @@ exports.updateMehfil = async ({
       date,
       is_published,
       old,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
       updated_at: new Date(),
       updated_by: updated_by,
     };

@@ -6,6 +6,8 @@ const Category = Object.freeze({
     AZAN: '6',
     NEW_DAILY_TALEEM: '7',
     SHORT_TALEEMAT: '8',
+    TALEEMAT: '9',
+    KARKUNAN_TALEEMAT: '10',
     ALL_NAAT_SHAREEF: 'all',
     NEW_NAAT_SHAREEF: '2',
     OLD_NAAT_SHAREEF: '3',

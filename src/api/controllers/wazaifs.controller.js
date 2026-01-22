@@ -6,11 +6,11 @@ exports.getWazaifs = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
 
-    const { page, size, category, search } = req.query;
+    const { page, limit, category, search } = req.query;
 
     const result = await wazaifsService.getWazaifs({
       page,
-      size,
+      limit,
       category,
       search,
       requestUrl,
@@ -24,17 +24,24 @@ exports.getWazaifs = async (req, res, next) => {
 
 exports.createWazaifShareef = async (req, res, next) => {
   try {
-    const { slug, title_en, title_ur, description, images, created_by } =
-      req.body;
+    const {
+      slug,
+      title_en,
+      title_ur,
+      description,
+      description_en,
+      images,
+      category,
+      is_published,
+      is_admin_favorite,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
+      wazaif_number,
+      created_by,
+    } = req.body;
 
-    const requiredFields = [
-      "slug",
-      "title_en",
-      "title_ur",
-      "description",
-      "images",
-      "created_by",
-    ];
+    const requiredFields = ["slug", "title_en", "title_ur", "created_by"];
 
     const missingFields = requiredFields.filter((field) => !req.body[field]);
 
@@ -44,22 +51,21 @@ exports.createWazaifShareef = async (req, res, next) => {
         message: `Missing required fields: ${missingFields.join(", ")}`,
       });
     }
-    // const { slug, title_en, title_ur ,description ,images
-    //  } = req.body;
-
-    // if (!slug || !title_en || !title_ur || !description || !images) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'Missing required fields: slug, title_en, description, images and title_ur are required.',
-    //   });
-    // }
 
     const result = await wazaifsService.createWazaifShareef({
       slug,
       title_en,
       title_ur,
       description,
+      description_en,
       images,
+      category,
+      is_published,
+      is_admin_favorite,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
+      wazaif_number,
       created_by,
     });
     return res.status(201).json({
@@ -76,8 +82,22 @@ exports.createWazaifShareef = async (req, res, next) => {
 exports.updateWazaifShareef = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { slug, title_en, title_ur, description, images, updated_by } =
-      req.body;
+    const {
+      slug,
+      title_en,
+      title_ur,
+      description,
+      description_en,
+      images,
+      category,
+      is_published,
+      is_admin_favorite,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
+      wazaif_number,
+      updated_by,
+    } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -86,18 +106,11 @@ exports.updateWazaifShareef = async (req, res, next) => {
       });
     }
 
-    if (
-      !slug ||
-      !title_en ||
-      !title_ur ||
-      !description ||
-      !images ||
-      !updated_by
-    ) {
+    if (!slug || !title_en || !title_ur || !updated_by) {
       return res.status(400).json({
         success: false,
         message:
-          "Missing required fields: slug, title_en, and title_ur , description and images are required.",
+          "Missing required fields: slug, title_en, and title_ur are required.",
       });
     }
 
@@ -107,7 +120,15 @@ exports.updateWazaifShareef = async (req, res, next) => {
       title_en,
       title_ur,
       description,
+      description_en,
       images,
+      category,
+      is_published,
+      is_admin_favorite,
+      is_for_karkun,
+      is_for_ehad_karkun,
+      is_sticky,
+      wazaif_number,
       updated_by,
     });
 
