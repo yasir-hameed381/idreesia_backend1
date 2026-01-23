@@ -7,7 +7,6 @@ const {
   constructPagination,
 } = require("../services/utilityServices");
 const { SearchFields } = require("../Enums/searchEnums");
-const { Category } = require("../Enums/catgoryEnums");
 
 exports.getNaatShareefs = async ({
   page = 1,
@@ -17,64 +16,48 @@ exports.getNaatShareefs = async ({
   requestUrl = "",
 }) => {
   try {
-    const allowedCategories = [
-      Category.ALL_NAAT_SHAREEF,
-      Category.NEW_NAAT_SHAREEF,
-      Category.OLD_NAAT_SHAREEF,
-    ]; // Allowed category values
-
-    // Validate the category parameter (empty string is allowed, treated as 'all')
-    if (category && !allowedCategories.includes(category.toLowerCase())) {
-      return {
-        success: false,
-        error: `Invalid category. Allowed categories are: ${allowedCategories.join(
-          ","
-        )}`,
-      };
-    }
+    const searchTrimmed = typeof search === "string" ? search.trim() : "";
+    const categoryTrimmed = typeof category === "string" ? category.trim() : String(category || "");
 
     const searchFields = [
       SearchFields.TITLE_EN,
       SearchFields.TITLE_UR,
+      SearchFields.SLUG,
       SearchFields.FILENAME,
       SearchFields.FILEPATH,
       SearchFields.TRACK,
-      SearchFields.CREATED_AT,
     ];
 
-    const { offset, limit, currentPage } = await paginate({ page, size });
+    const { offset, limit, currentPage } = paginate({ page, size });
 
     const where = {};
 
-    // if (search && searchFields.length > 0) {
-    //   where[Op.or] = searchFields.map((field) => ({
-    //     [field]: { [Op.like]: `%${search}%` },
-    //   }));
-    // }
-
-    if (category && category.toLowerCase() !== "all") {
-      where.category_id = category;
+    // Category filter: accept any non-empty value that is not 'all'
+    if (categoryTrimmed && categoryTrimmed.toLowerCase() !== "all") {
+      const categoryId = parseInt(categoryTrimmed, 10);
+      if (!Number.isNaN(categoryId)) {
+        where.category_id = categoryId;
+      }
     }
 
-    const isDateSearch = !isNaN(Date.parse(search));
-    console.log("isDateSearch,isDateSearch", isDateSearch);
-    if (search && searchFields.length > 0) {
-      where[Op.or] = searchFields.map((field) => {
-        if (field === SearchFields.CREATED_AT && isDateSearch) {
-          const start = new Date(search);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 1);
-          return {
-            [field]: {
-              [Op.between]: [start, end],
-            },
-          };
-        } else {
-          return {
-            [field]: { [Op.like]: `%${search}%` },
-          };
-        }
-      });
+    // Search: text fields use LIKE; date string uses CREATED_AT between
+    const isDateSearch = searchTrimmed.length > 0 && !Number.isNaN(Date.parse(searchTrimmed));
+    if (searchTrimmed && searchFields.length > 0) {
+      const orConditions = [];
+      for (const field of searchFields) {
+        orConditions.push({
+          [field]: { [Op.like]: `%${searchTrimmed}%` },
+        });
+      }
+      if (isDateSearch) {
+        const start = new Date(searchTrimmed);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 1);
+        orConditions.push({
+          [SearchFields.CREATED_AT]: { [Op.between]: [start, end] },
+        });
+      }
+      where[Op.or] = orConditions;
     }
 
     const { count, rows: data } = await naatModel.findAndCountAll({

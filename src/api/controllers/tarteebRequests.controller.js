@@ -4,7 +4,7 @@ const tarteebRequestsService = require("../services/tarteebRequestsService");
 exports.getTarteebRequests = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search, status, zone_id } = req.query;
+    const { page, size, search, status, zone_id, mehfil_directory_id } = req.query;
 
     const result = await tarteebRequestsService.getTarteebRequests({
       page,
@@ -12,6 +12,7 @@ exports.getTarteebRequests = async (req, res, next) => {
       search,
       status,
       zone_id,
+      mehfil_directory_id,
       requestUrl,
     });
 

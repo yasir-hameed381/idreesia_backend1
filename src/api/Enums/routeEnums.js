@@ -33,6 +33,7 @@ const route = Object.freeze({
   TARTEEB_REQUESTS: "/tarteeb-requests",
   KHAT: "/khat",
   RESPONSE_TEMPLATES: "/response-templates",
+  MESSAGE_SCHEDULES: "/message-schedules",
 });
 
 module.exports = { route };

@@ -545,9 +545,7 @@ exports.sendQuestions = async (khatId, questionIds = null, askedBy = null) => {
         success: false,
         message: "Khat record not found.",
       };
-    }
-
-    if (!khat.email) {
+    }    if (!khat.email) {
       return {
         success: false,
         message: "Cannot send questions - no email address on file.",

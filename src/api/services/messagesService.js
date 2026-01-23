@@ -19,9 +19,8 @@ exports.getMessages = async ({
     const searchFields = [
       SearchFields.TITLE_EN,
       SearchFields.TITLE_UR,
-      SearchFields.DESCRIPTION,
-      SearchFields.FILENAME,
-      SearchFields.TRACK,
+      SearchFields.DESCRIPTION_EN,
+      SearchFields.DESCRIPTION_UR,
     ];
     // Use the pagination service to calculate offset, limit, and currentPage
     // Based on the provided 'page' and 'size' parameters

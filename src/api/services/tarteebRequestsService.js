@@ -92,10 +92,11 @@ exports.getTarteebRequests = async ({
   search = "",
   status,
   zone_id,
+  mehfil_directory_id,
   requestUrl = "",
 }) => {
   try {
-    const { offset, limit, currentPage } = await paginate({ page, size });
+    const { offset, limit, currentPage } = paginate({ page, size });
 
     const where = {};
 
@@ -110,7 +111,17 @@ exports.getTarteebRequests = async ({
     }
 
     if (zone_id) {
-      where.zone_id = zone_id;
+      const zoneIdNum = parseInt(zone_id, 10);
+      if (!Number.isNaN(zoneIdNum)) {
+        where.zone_id = zoneIdNum;
+      }
+    }
+
+    if (mehfil_directory_id) {
+      const mehfilIdNum = parseInt(mehfil_directory_id, 10);
+      if (!Number.isNaN(mehfilIdNum)) {
+        where.mehfil_directory_id = mehfilIdNum;
+      }
     }
 
     const { count, rows: data } = await TarteebRequestModel.findAndCountAll({
