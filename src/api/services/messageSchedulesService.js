@@ -2,6 +2,45 @@ const logger = require("../../config/logger");
 const { sequelize: db } = require("../../config/database");
 const messageSchedulesModel = require("../models/messageSchedules")(db);
 const messagesModel = require("../models/messages")(db);
+const usersModel = require("../models/user-admin")(db);
+
+// Initialize associations if not already set up
+let associationsInitialized = false;
+
+const initializeAssociations = () => {
+  if (associationsInitialized) {
+    return;
+  }
+
+  // Set up belongsTo relationship with message
+  if (!messageSchedulesModel.associations?.message) {
+    messageSchedulesModel.belongsTo(messagesModel, {
+      foreignKey: "message_id",
+      as: "message",
+      onDelete: "CASCADE",
+    });
+  }
+
+  // Set up belongsTo relationship with createdBy user
+  if (!messageSchedulesModel.associations?.createdBy) {
+    messageSchedulesModel.belongsTo(usersModel, {
+      foreignKey: "created_by",
+      as: "createdBy",
+      onDelete: "SET NULL",
+    });
+  }
+
+  // Set up belongsTo relationship with updatedBy user
+  if (!messageSchedulesModel.associations?.updatedBy) {
+    messageSchedulesModel.belongsTo(usersModel, {
+      foreignKey: "updated_by",
+      as: "updatedBy",
+      onDelete: "SET NULL",
+    });
+  }
+
+  associationsInitialized = true;
+};
 
 // Calculate next run time based on repeat type
 const calculateNextRunTime = (scheduledAt, repeat, dayFlags) => {
@@ -115,6 +154,8 @@ exports.createMessageSchedule = async (payload) => {
 
 exports.getMessageSchedules = async ({ page = 1, size = 25, message_id, requestUrl = "" }) => {
   try {
+    initializeAssociations();
+    
     const { paginate, constructPagination } = require("../services/utilityServices");
     const { offset, limit, currentPage } = await paginate({ page, size });
 
@@ -127,9 +168,27 @@ exports.getMessageSchedules = async ({ page = 1, size = 25, message_id, requestU
       where,
       offset,
       limit,
-      order: [['scheduled_at', 'ASC']],
-      // Note: Include message association if needed
-      // include: [{ model: messagesModel, as: 'message' }],
+      order: [['next_run_at', 'ASC']],
+      include: [
+        {
+          model: messagesModel,
+          as: 'message',
+          attributes: ['id', 'title_en', 'title_ur', 'description_en', 'description_ur', 'is_published'],
+          required: false,
+        },
+        {
+          model: usersModel,
+          as: 'createdBy',
+          attributes: ['id', 'name', 'email'],
+          required: false,
+        },
+        {
+          model: usersModel,
+          as: 'updatedBy',
+          attributes: ['id', 'name', 'email'],
+          required: false,
+        },
+      ],
     });
 
     const { links, meta } = constructPagination({
@@ -153,9 +212,29 @@ exports.getMessageSchedules = async ({ page = 1, size = 25, message_id, requestU
 
 exports.getMessageScheduleById = async (id) => {
   try {
+    initializeAssociations();
+    
     const schedule = await messageSchedulesModel.findByPk(id, {
-      // Note: Include message association if needed
-      // include: [{ model: messagesModel, as: 'message' }],
+      include: [
+        {
+          model: messagesModel,
+          as: 'message',
+          attributes: ['id', 'title_en', 'title_ur', 'description_en', 'description_ur', 'is_published'],
+          required: false,
+        },
+        {
+          model: usersModel,
+          as: 'createdBy',
+          attributes: ['id', 'name', 'email'],
+          required: false,
+        },
+        {
+          model: usersModel,
+          as: 'updatedBy',
+          attributes: ['id', 'name', 'email'],
+          required: false,
+        },
+      ],
     });
 
     if (!schedule) {

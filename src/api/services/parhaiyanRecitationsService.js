@@ -6,7 +6,7 @@ const {paginate,constructPagination} = require('./utilityServices')
 const { SearchFields } = require('../Enums/searchEnums');
 
 
-exports.getParhaiyanRecitations = async ({ page = 1, size = 25, search = '',requestUrl=''}) => {
+exports.getParhaiyanRecitations = async ({ page = 1, size = 25, search = '', parhaiyan_id = null, requestUrl=''}) => {
   try {
     const searchFields = [
       SearchFields.NAME,
@@ -19,6 +19,11 @@ exports.getParhaiyanRecitations = async ({ page = 1, size = 25, search = '',requ
 
     // Initialize the 'where' object for query conditions
     const where = {};
+
+    // Add parhaiyan_id filter if provided
+    if (parhaiyan_id) {
+      where.parhaiyan_id = parhaiyan_id;
+    }
 
     // Add search condition if 'search' is provided and there are fields to search in
     if (search && searchFields.length > 0) {
@@ -81,6 +86,20 @@ exports.createParhaiyanRecitations = async ({ parhaiyan_id, darood_ibrahimi ,yas
   } catch (error) {
     logger.error(`Error creating tag: ${error.message}`);
     throw new Error(`Failed to create tag: ${error.message}`);
+  }
+};
+
+exports.deleteParhaiyanRecitation = async (id) => {
+  try {
+    const recitation = await parhaiyanRecitationsModel.findByPk(id);
+    if (!recitation) {
+      throw new Error('Recitation not found');
+    }
+    await recitation.destroy();
+    return { success: true };
+  } catch (error) {
+    logger.error(`Error deleting recitation: ${error.message}`);
+    throw new Error(`Failed to delete recitation: ${error.message}`);
   }
 };
 

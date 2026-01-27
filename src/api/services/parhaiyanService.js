@@ -168,3 +168,22 @@ exports.activeParhaiyan = async () => {
   }
 };
 
+exports.getParhaiyanBySlug = async (slug) => {
+  try {
+    const parhaiyan = await parhaiyanModel.findOne({
+      where: {
+        url_slug: slug,
+      },
+    });
+
+    if (!parhaiyan) {
+      return null;
+    }
+
+    return parhaiyan;
+  } catch (error) {
+    logger.error('Error fetching parhaiyan by slug:', error.message);
+    throw error;
+  }
+};
+

@@ -34,6 +34,7 @@ const route = Object.freeze({
   KHAT: "/khat",
   RESPONSE_TEMPLATES: "/response-templates",
   MESSAGE_SCHEDULES: "/message-schedules",
+  FILE_UPLOAD: "/file-upload",
 });
 
 module.exports = { route };

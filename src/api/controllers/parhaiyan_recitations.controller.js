@@ -6,9 +6,14 @@ const UAParser = require('ua-parser-js');
 exports.getParhaiyanRecitations = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
-    console.log()
-    const { page, size, search } = req.query;
-    const result = await parhaiyanRecitationsService.getParhaiyanRecitations({ page, size, search ,requestUrl });
+    const { page, size, search, parhaiyan_id } = req.query;
+    const result = await parhaiyanRecitationsService.getParhaiyanRecitations({ 
+      page, 
+      size, 
+      search,
+      parhaiyan_id: parhaiyan_id ? parseInt(parhaiyan_id, 10) : null,
+      requestUrl 
+    });
     return res.json(result);
   } catch (error) {
     logger.error('Error fetching Parhaiyan Recitations:', error);
@@ -57,6 +62,20 @@ exports.addParhaiyanRecitation = async (req, res, next) => {
 
   } catch (error) {
     logger.error(`Error Add parhaiyan: ${error.message}`);
+    return next(error);
+  }
+};
+
+exports.deleteParhaiyanRecitation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await parhaiyanRecitationsService.deleteParhaiyanRecitation(id);
+    return res.json({
+      success: true,
+      message: 'Recitation deleted successfully',
+    });
+  } catch (error) {
+    logger.error(`Error deleting recitation: ${error.message}`);
     return next(error);
   }
 };

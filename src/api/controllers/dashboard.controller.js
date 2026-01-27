@@ -49,6 +49,14 @@ exports.getDashboardStats = async (req, res, next) => {
 
     const stats = await dashboardService.getDashboardStats(filters, user);
 
+    // Log ehadKarkuns to verify it's in the response
+    logger.info("Dashboard stats response:", {
+      hasEhadKarkuns: 'ehadKarkuns' in stats,
+      ehadKarkuns: stats.ehadKarkuns,
+      totalKarkuns: stats.totalKarkuns,
+      responseKeys: Object.keys(stats),
+    });
+
     return res.json(stats);
   } catch (error) {
     logger.error("Error fetching dashboard stats:", error);

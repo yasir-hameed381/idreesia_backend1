@@ -9,6 +9,7 @@ const mehfilDirectoryModel = require("../models/mehfil-directories")(db);
 const mehfilReportsModel = require("../models/mehfilReports")(db);
 const newEhadModel = require("../models/newEhadKarkun")(db);
 const tabarukatModel = require("../models/tabarukat")(db);
+const ehadKarkunModel = require("../models/ehadKarkun")(db);
 
 /**
  * Get zones filtered by user permissions (similar to Laravel's Zone::forUser())
@@ -129,19 +130,23 @@ const calculateBasicStats = async (filters) => {
 
     // Base query conditions
     const userWhere = { is_super_admin: false };
+    const ehadKarkunWhere = {}; // Where clause for ehad_karkuns table (not filtered by mehfil)
     const newEhadWhere = {};
     const tabarukatWhere = {};
 
     // Apply zone filter
     if (selectedZoneId) {
       userWhere.zone_id = selectedZoneId;
+      ehadKarkunWhere.zone_id = selectedZoneId; // Ehad Karkuns filtered by zone
       newEhadWhere.zone_id = selectedZoneId;
       tabarukatWhere.zone_id = selectedZoneId;
     }
 
-    // Apply mehfil filter
+    // Apply mehfil filter (NOT applied to Ehad Karkuns - matching Laravel behavior)
     if (selectedMehfilId) {
       userWhere.mehfil_directory_id = selectedMehfilId;
+      // Note: ehadKarkunWhere does NOT include mehfil_directory_id (matching Laravel)
+      // Ehad Karkuns table doesn't have mehfil_directory_id column
       newEhadWhere.mehfil_directory_id = selectedMehfilId;
       tabarukatWhere.mehfil_directory_id = selectedMehfilId;
     }
@@ -151,9 +156,10 @@ const calculateBasicStats = async (filters) => {
       where: { ...userWhere, user_type: "Karkun" },
     });
 
-    // Ehad Karkuns
-    const ehadKarkuns = await userModel.count({
-      where: { ...userWhere, user_type: "EhadKarkun" },
+    // Ehad Karkuns - Using ehad_karkuns table instead of users table
+    // NOT filtered by mehfil, only by zone - matching Laravel behavior
+    const ehadKarkuns = await ehadKarkunModel.count({
+      where: ehadKarkunWhere,
     });
 
     // New Ehads (filtered by month/year)
@@ -376,9 +382,9 @@ const calculateRegionAdminStats = async (filters, user) => {
           where: { zone_id: zone.id, user_type: "Karkun" },
         });
 
-        // Ehad Karkuns in zone
-        const ehadKarkun = await userModel.count({
-          where: { zone_id: zone.id, user_type: "EhadKarkun" },
+        // Ehad Karkuns in zone - Using ehad_karkuns table
+        const ehadKarkun = await ehadKarkunModel.count({
+          where: { zone_id: zone.id },
         });
 
         // Tabarukats in zone
@@ -467,6 +473,12 @@ exports.getDashboardStats = async (filters, user) => {
     logger.info("Dashboard stats calculated:", {
       zonesCount: zones.length,
       mehfilsCount: mehfils.length,
+      basicStats: {
+        totalKarkuns: basicStats.totalKarkuns,
+        ehadKarkuns: basicStats.ehadKarkuns,
+        totalNewEhads: basicStats.totalNewEhads,
+        totalTabarukats: basicStats.totalTabarukats,
+      },
       userRole: {
         is_zone_admin: user.is_zone_admin,
         is_region_admin: user.is_region_admin,
@@ -478,14 +490,24 @@ exports.getDashboardStats = async (filters, user) => {
       zones: zones.map(z => ({ id: z.id, title: z.title_en })),
     });
 
-    return {
-      ...basicStats,
-      ...zoneStats,
-      ...mehfilStats,
-      ...regionStats,
+    // Build final response with all stats
+    const response = {
+      ...basicStats, // Includes: totalKarkuns, ehadKarkuns, totalNewEhads, totalTabarukats
+      ...zoneStats, // Includes: totalMehfils, mehfilsWithReports, etc.
+      ...mehfilStats, // Includes: hasSubmittedReport, monthlyAttendanceDays, totalDutyKarkuns
+      ...regionStats, // Includes: totalZones, zoneReportStats
       zones,
       mehfils,
     };
+
+    // Log ehadKarkuns specifically to ensure it's in the response
+    logger.info("Dashboard response includes ehadKarkuns:", {
+      ehadKarkuns: response.ehadKarkuns,
+      hasEhadKarkuns: 'ehadKarkuns' in response,
+      responseKeys: Object.keys(response),
+    });
+
+    return response;
   } catch (error) {
     logger.error("Error getting dashboard stats:", error);
     throw error;
@@ -501,9 +523,8 @@ exports.getOverallTotals = async () => {
       where: { user_type: "Karkun" },
     });
 
-    const totalEhadKarkuns = await userModel.count({
-      where: { user_type: "EhadKarkun" },
-    });
+    // Total Ehad Karkuns - Using ehad_karkuns table
+    const totalEhadKarkuns = await ehadKarkunModel.count();
 
     const totalMehfils = await mehfilDirectoryModel.count({
       where: { is_published: 1 },

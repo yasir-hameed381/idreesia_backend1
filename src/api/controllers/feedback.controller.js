@@ -4,16 +4,18 @@ const feedbackService = require("../services/feedbackService");
 //  Create Feedback
 exports.createFeedback = async (req, res, next) => {
   try {
-    const { name, contact_no, type, subject, description, screenshot } =
+    const { name, contact_no, type, app_type, subject, description, screenshot, is_resolved } =
       req.body;
 
     const result = await feedbackService.createFeedback({
       name,
       contact_no,
       type,
+      app_type,
       subject,
       description,
       screenshot,
+      is_resolved,
     });
 
     return res.status(201).json({
@@ -31,12 +33,13 @@ exports.createFeedback = async (req, res, next) => {
 exports.getFeedback = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search } = req.query;
+    const { page, size, search, statusFilter } = req.query;
 
     const result = await feedbackService.getFeedback({
       page,
       size,
       search,
+      statusFilter: statusFilter || 'all',
       requestUrl,
     });
 
@@ -75,7 +78,7 @@ exports.getFeedbackById = async (req, res, next) => {
 exports.updateFeedback = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, contact_no, type, subject, description, screenshot } =
+    const { name, contact_no, type, app_type, subject, description, screenshot, is_resolved } =
       req.body;
 
     if (!id) {
@@ -89,9 +92,11 @@ exports.updateFeedback = async (req, res, next) => {
       name,
       contact_no,
       type,
+      app_type: req.body.app_type,
       subject,
       description,
       screenshot,
+      is_resolved: req.body.is_resolved,
     });
 
     return res.status(200).json({

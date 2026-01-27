@@ -33,6 +33,16 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING(255),
         allowNull: true,
       },
+      app_type: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: 'idreesia_app',
+      },
+      is_resolved: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: true,

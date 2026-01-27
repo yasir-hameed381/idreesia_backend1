@@ -5,11 +5,19 @@ exports.getEhadKarkun = async (req, res, next) => {
  
   try {
     const requestUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
-    const { page, size, search } = req.query;
-    const result = await ehadKarkunService.getEhadKarkun({ page, size, search ,requestUrl });
+    const { page, size, search, zone_id, sortField, sortDirection } = req.query;
+    const result = await ehadKarkunService.getEhadKarkun({ 
+      page, 
+      size, 
+      search, 
+      zone_id: zone_id ? parseInt(zone_id) : null, 
+      sortField: sortField || 'created_at',
+      sortDirection: sortDirection || 'DESC',
+      requestUrl 
+    });
     return res.json(result);
   } catch (error) {
-    logger.error('Error fetching Categories:', error);
+    logger.error('Error fetching Ehad Karkuns:', error);
     return next(error);
   }
 };

@@ -35,6 +35,7 @@ const tarteebRequestsRoute = require("./tarteebRequests.route");
 const khatRoute = require("./khat.route");
 const responseTemplatesRoute = require("./responseTemplates.route");
 const messageSchedulesRoute = require("./messageSchedules.route");
+const fileUploadRoute = require("./fileUpload.route");
 const { route } = require("../../Enums/routeEnums");
 
 const router = express.Router();
@@ -84,6 +85,7 @@ router.use(route.TARTEEB_REQUESTS, tarteebRequestsRoute);
 router.use(route.KHAT, khatRoute);
 router.use(route.RESPONSE_TEMPLATES, responseTemplatesRoute);
 router.use(route.MESSAGE_SCHEDULES, messageSchedulesRoute);
+router.use(route.FILE_UPLOAD, fileUploadRoute);
 
 // Health check route
 router.get("/healthcheck", (req, res) => {

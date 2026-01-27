@@ -106,3 +106,25 @@ exports.activeParhaiyans = async (req, res, next) => {
   }
 };
 
+exports.getParhaiyanBySlug = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const result = await parhaiyanService.getParhaiyanBySlug(slug);
+    
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parhaiyan not found',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error fetching parhaiyan by slug:', error);
+    return next(error);
+  }
+};
+

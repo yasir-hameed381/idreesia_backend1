@@ -6,7 +6,7 @@ const { paginate, constructPagination } = require('./utilityServices')
 const { SearchFields } = require('../Enums/searchEnums');
 
 
-exports.getEhadKarkun = async ({ page = 1, size = 50, search = '', requestUrl = '' }) => {
+exports.getEhadKarkun = async ({ page = 1, size = 50, search = '', zone_id = null, sortField = 'created_at', sortDirection = 'DESC', requestUrl = '' }) => {
   try {
     const searchFields = [
       SearchFields.NAME_EN,
@@ -31,6 +31,11 @@ exports.getEhadKarkun = async ({ page = 1, size = 50, search = '', requestUrl = 
     // Initialize the 'where' object for query conditions
     const where = {};
 
+    // Add zone filter if provided
+    if (zone_id) {
+      where.zone_id = zone_id;
+    }
+
     // Add search condition if 'search' is provided and there are fields to search in
     if (search && searchFields.length > 0) {
       // Dynamically generate a WHERE clause for the search fields using Sequelize's Op.like operator
@@ -39,14 +44,30 @@ exports.getEhadKarkun = async ({ page = 1, size = 50, search = '', requestUrl = 
       }));
     }
 
+    // Map frontend sort field names to database column names
+    const sortFieldMap = {
+      'id': 'id',
+      'name': 'name_en',
+      'phone_number': 'mobile_no',
+      'zone_id': 'zone_id',
+      'city': 'city_en',
+      'country': 'country_en',
+      'created_at': 'created_at',
+    };
+
+    const dbSortField = sortFieldMap[sortField] || 'created_at';
+    const order = [[dbSortField, sortDirection.toUpperCase()]];
+
     // Query the database using Sequelize's findAndCountAll method
     // - 'where' specifies the filtering conditions
     // - 'offset' skips a certain number of records for pagination
     // - 'limit' limits the number of records retrieved
+    // - 'order' specifies the sorting
     const { count, rows: data } = await ehadKarkunModel.findAndCountAll({
       where,
       offset,
       limit,
+      order,
     });
 
     const { links, meta } = constructPagination({

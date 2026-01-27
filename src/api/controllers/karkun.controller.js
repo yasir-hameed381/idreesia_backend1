@@ -70,7 +70,7 @@ exports.getKarkun = async (req, res, next) => {
 
     // Construct requestUrl for pagination links
     const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}${req.path}`;
-    const { page, size, search, zone_id } = req.query;
+    const { page, size, search, zone_id, activeTab, sortBy, sortDirection } = req.query;
     
     // Parse and validate parameters
     const pageNum = parseInt(page, 10) || 1;
@@ -82,6 +82,9 @@ exports.getKarkun = async (req, res, next) => {
       size: sizeNum,
       search: search || "",
       zone_id: zoneIdNum,
+      activeTab: activeTab || null,
+      sortBy: sortBy || "name",
+      sortDirection: sortDirection || "asc",
       requestUrl: baseUrl,
     });
     

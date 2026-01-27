@@ -61,6 +61,9 @@ exports.getKarkun = async ({
   size = 50,
   search = "",
   zone_id = null,
+  activeTab = null,
+  sortBy = "name",
+  sortDirection = "asc",
   requestUrl = "",
 }) => {
   try {
@@ -73,15 +76,45 @@ exports.getKarkun = async ({
     const { offset, limit, currentPage } = paginate({ page, size });
 
     // Initialize the 'where' object for query conditions
-    // Filter by user_type = 'karkun' or 'Karkun'
+    // Exclude super admins (matching Laravel)
     const whereConditions = [
-      {
+      { is_super_admin: false }
+    ];
+
+    // Apply tab-specific filtering (matching Laravel KarkunList.php)
+    if (activeTab === 'mehfil_admin') {
+      // Show only mehfil admins
+      whereConditions.push({ is_mehfil_admin: true });
+    } else if (activeTab === 'zone_admin') {
+      // Show only zone admins
+      whereConditions.push({ is_zone_admin: true });
+    } else if (activeTab === 'karkun') {
+      // Show regular karkuns (exclude admins)
+      whereConditions.push({
         [Op.or]: [
           { user_type: 'karkun' },
           { user_type: 'Karkun' }
         ]
-      }
-    ];
+      });
+      whereConditions.push({ is_mehfil_admin: false });
+      whereConditions.push({ is_zone_admin: false });
+    } else if (activeTab === 'ehad_karkun') {
+      // Ehad karkuns are handled separately via ehadKarkun endpoint
+      whereConditions.push({
+        [Op.or]: [
+          { user_type: 'ehad_karkun' },
+          { user_type: 'EhadKarkun' }
+        ]
+      });
+    } else {
+      // Default: show karkuns
+      whereConditions.push({
+        [Op.or]: [
+          { user_type: 'karkun' },
+          { user_type: 'Karkun' }
+        ]
+      });
+    }
 
     // Add zone_id filter if provided
     if (zone_id !== null && zone_id !== undefined) {
@@ -90,26 +123,13 @@ exports.getKarkun = async ({
       });
     }
 
-    // Add search condition if 'search' is provided
+    // Add search condition if 'search' is provided (matching Laravel: name, email, phone_number, mehfilDirectory name)
     if (search && search.trim()) {
-      // Map search fields to users table column names
       const searchConditions = [
         { name: { [Op.like]: `%${search}%` } },
-        { name_ur: { [Op.like]: `%${search}%` } },
-        { father_name: { [Op.like]: `%${search}%` } },
-        { father_name_ur: { [Op.like]: `%${search}%` } },
-        { phone_number: { [Op.like]: `%${search}%` } },
-        { id_card_number: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } },
+        { phone_number: { [Op.like]: `%${search}%` } },
       ];
-
-      // Add numeric fields if search is numeric
-      if (!isNaN(search)) {
-        searchConditions.push(
-          { birth_year: parseInt(search) },
-          { ehad_year: parseInt(search) }
-        );
-      }
 
       // Add search conditions to where clause
       whereConditions.push({
@@ -122,12 +142,16 @@ exports.getKarkun = async ({
       ? whereConditions[0] 
       : { [Op.and]: whereConditions };
 
+    // Determine sort field and direction (matching Laravel)
+    const sortField = sortBy === 'email' ? 'email' : sortBy === 'created_at' ? 'created_at' : 'name';
+    const sortDir = sortDirection === 'desc' ? 'DESC' : 'ASC';
+
     // Query the database using Sequelize's findAndCountAll method
     const queryOptions = {
       where: where,
       offset: Math.max(0, offset), // Ensure offset is not negative
       limit: Math.max(1, Math.min(limit, 100)), // Ensure limit is between 1 and 100
-      order: [['id', 'DESC']], // Order by id (more reliable than created_at)
+      order: [[sortField, sortDir]], // Order by sortBy field (matching Laravel)
     };
 
     logger.info(`Querying karkuns with options:`, {
