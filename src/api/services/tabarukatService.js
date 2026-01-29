@@ -46,18 +46,13 @@ exports.getTabarukat = async ({
   requestUrl = "",
 }) => {
   try {
-    const searchFields = [
-      SearchFields.NAME,
-      SearchFields.DESCRIPTION,
-      SearchFields.zone_id,
-      SearchFields.mehfil_directory_id,
-    ];
+    const searchFields = [SearchFields.NAME, SearchFields.DESCRIPTION];
 
     const { offset, limit, currentPage } = await paginate({ page, size });
 
     const where = {};
 
-    // Search filter
+    // Search filter (text fields only; zone/mehfil filtered separately)
     if (search && search.trim() && searchFields.length > 0) {
       where[Op.or] = searchFields.map((field) => ({
         [field]: { [Op.like]: `%${search.trim()}%` },
@@ -65,18 +60,26 @@ exports.getTabarukat = async ({
     }
 
     // Zone filter
-    if (zone_id && zone_id.trim()) {
-      const zoneIdNum = parseInt(zone_id);
-      if (!isNaN(zoneIdNum)) {
-        where.zone_id = zoneIdNum;
+    if (zone_id) {
+      // Handle both string and number
+      const zoneIdStr = String(zone_id).trim();
+      if (zoneIdStr) {
+        const zoneIdNum = parseInt(zoneIdStr);
+        if (!isNaN(zoneIdNum)) {
+          where.zone_id = zoneIdNum;
+        }
       }
     }
 
     // Mehfil directory filter
-    if (mehfil_directory_id && mehfil_directory_id.trim()) {
-      const mehfilId = parseInt(mehfil_directory_id);
-      if (!isNaN(mehfilId)) {
-        where.mehfil_directory_id = mehfilId;
+    if (mehfil_directory_id) {
+      // Handle both string and number
+      const mehfilIdStr = String(mehfil_directory_id).trim();
+      if (mehfilIdStr) {
+        const mehfilId = parseInt(mehfilIdStr);
+        if (!isNaN(mehfilId)) {
+          where.mehfil_directory_id = mehfilId;
+        }
       }
     }
 

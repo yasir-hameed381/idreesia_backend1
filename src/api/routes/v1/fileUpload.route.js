@@ -19,8 +19,8 @@ router.post("/multipart-upload/list-parts", controller.listParts);
 router.post("/multipart-upload/complete", controller.completeMultipartUpload);
 router.post("/multipart-upload/abort", controller.abortMultipartUpload);
 
-// Simple file upload route
-router.post("/file-upload", upload.single("file"), controller.uploadFile);
+// Simple file upload at mount root: POST /api/file-upload (used by tabarukats, etc.)
+router.post("/", upload.single("file"), controller.uploadFile);
 
 module.exports = router;
 

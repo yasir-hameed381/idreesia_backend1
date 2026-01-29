@@ -10,14 +10,30 @@ exports.paginate = ({ page = 1, size = 25 }) => {
 };
 
 
+/**
+ * Build a pagination URL by setting only the 'page' param, preserving rest of query.
+ * baseUrl may be e.g. "http://localhost:3000/api/tabarukat?page=1&size=25"
+ */
+function buildPageUrl(baseUrl, pageNum) {
+  if (!baseUrl || typeof baseUrl !== "string") return null;
+  try {
+    const u = new URL(baseUrl);
+    u.searchParams.set("page", String(pageNum));
+    return u.toString();
+  } catch {
+    const sep = baseUrl.includes("?") ? "&" : "?";
+    return `${baseUrl}${sep}page=${pageNum}`;
+  }
+}
+
 exports.constructPagination = ({ count, limit, offset, currentPage, baseUrl }) => {
   const lastPage = Math.ceil(count / limit);
 
   const links = {
-    first: `${baseUrl}?page=1`,
-    last: `${baseUrl}?page=${lastPage}`,
-    prev: currentPage > 1 ? `${baseUrl}?page=${currentPage - 1}` : null,
-    next: currentPage < lastPage ? `${baseUrl}?page=${currentPage + 1}` : null,
+    first: buildPageUrl(baseUrl, 1),
+    last: buildPageUrl(baseUrl, lastPage),
+    prev: currentPage > 1 ? buildPageUrl(baseUrl, currentPage - 1) : null,
+    next: currentPage < lastPage ? buildPageUrl(baseUrl, currentPage + 1) : null,
   };
 
   const meta = {
