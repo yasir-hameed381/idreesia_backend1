@@ -4,11 +4,17 @@ const dutyRosterAssignmentService = require("../services/dutyRosterAssignmentSer
 
 /**
  * Get all duty rosters with assignments (matching Laravel implementation)
+ * Query params: zone_id, mehfil_directory_id, user_type, search
  */
 exports.getAllDutyRosters = async (req, res, next) => {
   try {
-    // No filters applied - get all duty rosters
-    const result = await dutyRosterService.getAllDutyRosters({});
+    const { zone_id, mehfil_directory_id, user_type, search } = req.query;
+    const result = await dutyRosterService.getAllDutyRosters({
+      zoneId: zone_id,
+      mehfilDirectoryId: mehfil_directory_id,
+      userTypeFilter: user_type || "karkun",
+      search: search || "",
+    });
 
     return res.json(result);
   } catch (error) {

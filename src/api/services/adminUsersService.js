@@ -77,7 +77,8 @@ exports.getuserAdmins = async ({
     const where = {};
 
     // Exclude super admins (like Laravel does)
-    where.is_super_admin = false;
+    // Use Op.ne (not equal) to exclude true, which will include false, null, and undefined
+    where.is_super_admin = { [Op.ne]: true };
     
     logger.info("Fetching admin users with filters:", {
       page,
@@ -134,9 +135,18 @@ exports.getuserAdmins = async ({
     // Add search condition if 'search' is provided (matching Laravel: name and email)
     if (search && search.trim()) {
       const searchTerm = search.trim();
-      where[Op.or] = [
-        { name: { [Op.like]: `%${searchTerm}%` } },
-        { email: { [Op.like]: `%${searchTerm}%` } },
+      // Store existing conditions and combine with search using Op.and
+      const existingConditions = { ...where };
+      // Clear where and rebuild with Op.and to combine all conditions
+      Object.keys(where).forEach(key => delete where[key]);
+      where[Op.and] = [
+        existingConditions,
+        {
+          [Op.or]: [
+            { name: { [Op.like]: `%${searchTerm}%` } },
+            { email: { [Op.like]: `%${searchTerm}%` } },
+          ],
+        },
       ];
     }
 

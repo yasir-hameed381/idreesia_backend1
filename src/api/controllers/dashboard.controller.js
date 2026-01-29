@@ -47,13 +47,24 @@ exports.getDashboardStats = async (req, res, next) => {
         : null,
     };
 
+    logger.info("Dashboard controller - Filters received:", {
+      selected_month,
+      selected_year,
+      selected_zone_id,
+      selected_mehfil_id,
+      parsedFilters: filters,
+    });
+
     const stats = await dashboardService.getDashboardStats(filters, user);
 
-    // Log ehadKarkuns to verify it's in the response
+    // Log response including mehfil_directory
     logger.info("Dashboard stats response:", {
       hasEhadKarkuns: 'ehadKarkuns' in stats,
       ehadKarkuns: stats.ehadKarkuns,
       totalKarkuns: stats.totalKarkuns,
+      hasMehfilDirectory: 'mehfil_directory' in stats,
+      mehfilDirectory: stats.mehfil_directory,
+      selectedMehfilId: filters.selectedMehfilId,
       responseKeys: Object.keys(stats),
     });
 

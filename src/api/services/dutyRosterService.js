@@ -65,7 +65,8 @@ const DAYS = [
 ];
 
 /**
- * Get all duty rosters with assignments (no filters - simple implementation)
+ * Get duty rosters with assignments (matching Laravel DutyRosterList::loadDutyData)
+ * Filters: zoneId (required), mehfilDirectoryId, userTypeFilter, search
  */
 exports.getAllDutyRosters = async ({
   zoneId = null,
@@ -76,12 +77,99 @@ exports.getAllDutyRosters = async ({
   try {
     initializeAssociations();
 
-    // Simple query - get all rosters with user and assignments
+    const parsedZoneId =
+      zoneId != null && zoneId !== "" ? Number(zoneId) : null;
+    if (parsedZoneId == null || Number.isNaN(parsedZoneId)) {
+      return {
+        success: true,
+        showTable: false,
+        data: [],
+      };
+    }
+
+    const parsedMehfilId =
+      mehfilDirectoryId != null && mehfilDirectoryId !== ""
+        ? Number(mehfilDirectoryId)
+        : null;
+    const effectiveMehfilId =
+      parsedMehfilId != null && !Number.isNaN(parsedMehfilId)
+        ? parsedMehfilId
+        : null;
+    const trimmedSearch = (search && String(search).trim()) || "";
+
+    const rosterWhere = { zone_id: parsedZoneId };
+    if (effectiveMehfilId != null) {
+      rosterWhere.mehfil_directory_id = effectiveMehfilId;
+    }
+
+    const userWhere = { user_type: userTypeFilter || "karkun" };
+    if (trimmedSearch) {
+      const pattern = `%${trimmedSearch}%`;
+      userWhere[Op.or] = [
+        { name: { [Op.like]: pattern } },
+        { email: { [Op.like]: pattern } },
+        { phone_number: { [Op.like]: pattern } },
+      ];
+    }
+
+    if (effectiveMehfilId != null) {
+      // Single mehfil: one row per roster (per user per mehfil), no mehfil on each duty
+      const rosters = await dutyRosterModel.findAll({
+        where: rosterWhere,
+        include: [
+          {
+            model: userModel,
+            as: "user",
+            where: userWhere,
+            required: true,
+          },
+          {
+            model: mehfilDirectoryModel,
+            as: "mehfilDirectory",
+            required: false,
+          },
+          {
+            model: dutyRosterAssignmentModel,
+            as: "assignments",
+            include: [{ model: dutyTypeModel, as: "dutyType" }],
+            required: false,
+          },
+        ],
+        order: [["id", "ASC"]],
+      });
+
+      const data = rosters.map((roster) => {
+        const duties = {};
+        DAYS.forEach((day) => {
+          duties[day] = (roster.assignments || [])
+            .filter((a) => a.day === day)
+            .map((a) => ({
+              id: a.id,
+              duty_type_id: a.duty_type_id,
+              duty_type: a.dutyType,
+            }));
+        });
+        return {
+          roster_id: roster.id,
+          mehfil_directory_id: roster.mehfil_directory_id,
+          user_id: roster.user_id,
+          user: roster.user,
+          mehfil_directory: roster.mehfilDirectory,
+          duties,
+        };
+      });
+
+      return { success: true, showTable: true, data };
+    }
+
+    // All mehfils in zone: only rosters that have assignments, group by user_id (Laravel branch)
     const rosters = await dutyRosterModel.findAll({
+      where: rosterWhere,
       include: [
         {
           model: userModel,
           as: "user",
+          where: userWhere,
           required: true,
         },
         {
@@ -92,65 +180,41 @@ exports.getAllDutyRosters = async ({
         {
           model: dutyRosterAssignmentModel,
           as: "assignments",
-          include: [
-            {
-              model: dutyTypeModel,
-              as: "dutyType",
-            },
-          ],
-          required: false,
+          include: [{ model: dutyTypeModel, as: "dutyType" }],
+          required: true,
         },
       ],
       order: [["id", "ASC"]],
     });
 
-    // Group by user and consolidate all duties
     const userRostersMap = new Map();
-
     rosters.forEach((roster) => {
       const userId = roster.user_id;
       if (!userRostersMap.has(userId)) {
         userRostersMap.set(userId, {
-          roster_id: roster.id,
           user_id: userId,
           user: roster.user,
-          mehfil_directory_id: roster.mehfil_directory_id,
-          mehfil_directory: roster.mehfilDirectory,
           duties: {},
         });
       }
-
-      const consolidatedRoster = userRostersMap.get(userId);
-
-      // Initialize all days with empty arrays
+      const consolidated = userRostersMap.get(userId);
       DAYS.forEach((day) => {
-        if (!consolidatedRoster.duties[day]) {
-          consolidatedRoster.duties[day] = [];
-        }
-      });
-
-      // Add assignments to respective days
-      if (roster.assignments && roster.assignments.length > 0) {
-        roster.assignments.forEach((assignment) => {
-          if (assignment.day && DAYS.includes(assignment.day)) {
-            consolidatedRoster.duties[assignment.day].push({
-              id: assignment.id,
-              duty_type_id: assignment.duty_type_id,
-              duty_type: assignment.dutyType,
+        if (!consolidated.duties[day]) consolidated.duties[day] = [];
+        (roster.assignments || [])
+          .filter((a) => a.day === day)
+          .forEach((a) => {
+            consolidated.duties[day].push({
+              id: a.id,
+              duty_type_id: a.duty_type_id,
+              duty_type: a.dutyType,
               mehfil: roster.mehfilDirectory,
             });
-          }
-        });
-      }
+          });
+      });
     });
 
     const data = Array.from(userRostersMap.values());
-
-    return {
-      success: true,
-      showTable: true,
-      data: data,
-    };
+    return { success: true, showTable: true, data };
   } catch (error) {
     logger.error(`Error fetching duty rosters: ${error.message}`, {
       stack: error.stack,

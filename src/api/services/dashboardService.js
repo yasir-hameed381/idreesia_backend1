@@ -470,9 +470,94 @@ exports.getDashboardStats = async (filters, user) => {
       ? await getMehfilsForZone(selectedZoneId)
       : [];
 
+    // Get selected mehfil directory details if selectedMehfilId is provided
+    // IMPORTANT: Fetch directly from database regardless of zone filters or published status
+    // This ensures we can display the mehfil card even if it's not in the mehfils array
+    let mehfilDirectory = null;
+    if (selectedMehfilId) {
+      try {
+        logger.info("Fetching mehfil directory for selectedMehfilId:", {
+          selectedMehfilId,
+          selectedMehfilIdType: typeof selectedMehfilId,
+        });
+        
+        // Use findByPk to fetch directly by ID - no filters applied
+        // This ensures we get the mehfil even if it's not published or in a different zone
+        const mehfil = await mehfilDirectoryModel.findByPk(selectedMehfilId, {
+          attributes: [
+            "id",
+            "mehfil_number",
+            "name_en",
+            "name_ur",
+            "address_en",
+            "address_ur",
+            "zimdar_bhai",
+            "zimdar_bhai_phone_number",
+            "zone_id",
+            "is_published",
+          ],
+          // No where clause - fetch by primary key directly
+        });
+        
+        logger.info("Mehfil directory query result:", {
+          found: !!mehfil,
+          mehfilId: selectedMehfilId,
+          mehfilData: mehfil ? {
+            id: mehfil.id,
+            mehfil_number: mehfil.mehfil_number,
+            name_en: mehfil.name_en,
+            zone_id: mehfil.zone_id,
+            is_published: mehfil.is_published,
+          } : null,
+        });
+        
+        if (mehfil) {
+          mehfilDirectory = {
+            id: mehfil.id,
+            mehfil_number: mehfil.mehfil_number,
+            name_en: mehfil.name_en,
+            name_ur: mehfil.name_ur,
+            address_en: mehfil.address_en,
+            address_ur: mehfil.address_ur,
+            zimdar_bhai: mehfil.zimdar_bhai,
+            zimdar_bhai_phone_number: mehfil.zimdar_bhai_phone_number,
+            zone_id: mehfil.zone_id,
+            is_published: mehfil.is_published,
+          };
+          logger.info("✅ Mehfil directory object created successfully:", {
+            id: mehfilDirectory.id,
+            mehfil_number: mehfilDirectory.mehfil_number,
+            name_en: mehfilDirectory.name_en,
+            zone_id: mehfilDirectory.zone_id,
+          });
+        } else {
+          logger.warn("⚠️ Mehfil directory not found in database for selectedMehfilId:", selectedMehfilId);
+          // Return null explicitly so frontend knows it was requested but not found
+          mehfilDirectory = null;
+        }
+      } catch (error) {
+        logger.error("❌ Error fetching selected mehfil directory:", {
+          error: error.message,
+          stack: error.stack,
+          selectedMehfilId,
+        });
+        // Set to null on error so frontend knows fetch failed
+        mehfilDirectory = null;
+      }
+    } else {
+      logger.info("No selectedMehfilId provided, skipping mehfil directory fetch");
+    }
+
     logger.info("Dashboard stats calculated:", {
       zonesCount: zones.length,
       mehfilsCount: mehfils.length,
+      selectedMehfilId,
+      hasMehfilDirectory: !!mehfilDirectory,
+      mehfilDirectory: mehfilDirectory ? {
+        id: mehfilDirectory.id,
+        mehfil_number: mehfilDirectory.mehfil_number,
+        name_en: mehfilDirectory.name_en,
+      } : null,
       basicStats: {
         totalKarkuns: basicStats.totalKarkuns,
         ehadKarkuns: basicStats.ehadKarkuns,
@@ -491,6 +576,8 @@ exports.getDashboardStats = async (filters, user) => {
     });
 
     // Build final response with all stats
+    // IMPORTANT: Always include mehfil_directory in response when selectedMehfilId is provided
+    // This ensures frontend can display the card even if mehfil is not in the mehfils array
     const response = {
       ...basicStats, // Includes: totalKarkuns, ehadKarkuns, totalNewEhads, totalTabarukats
       ...zoneStats, // Includes: totalMehfils, mehfilsWithReports, etc.
@@ -498,12 +585,32 @@ exports.getDashboardStats = async (filters, user) => {
       ...regionStats, // Includes: totalZones, zoneReportStats
       zones,
       mehfils,
+      // Always include mehfil_directory (even if null) when selectedMehfilId is provided
+      // This allows frontend to distinguish between "not requested" vs "not found"
+      mehfil_directory: selectedMehfilId ? mehfilDirectory : undefined,
     };
+    
+    logger.info("Final dashboard response:", {
+      hasMehfilDirectory: !!response.mehfil_directory,
+      mehfilDirectory: response.mehfil_directory ? {
+        id: response.mehfil_directory.id,
+        mehfil_number: response.mehfil_directory.mehfil_number,
+        name_en: response.mehfil_directory.name_en,
+      } : null,
+      selectedMehfilId,
+      responseKeys: Object.keys(response),
+    });
 
-    // Log ehadKarkuns specifically to ensure it's in the response
-    logger.info("Dashboard response includes ehadKarkuns:", {
+    // Log ehadKarkuns and mehfil_directory specifically to ensure they're in the response
+    logger.info("Dashboard response includes ehadKarkuns and mehfil_directory:", {
       ehadKarkuns: response.ehadKarkuns,
       hasEhadKarkuns: 'ehadKarkuns' in response,
+      hasMehfilDirectory: 'mehfil_directory' in response,
+      mehfilDirectory: response.mehfil_directory ? {
+        id: response.mehfil_directory.id,
+        mehfil_number: response.mehfil_directory.mehfil_number,
+        name_en: response.mehfil_directory.name_en,
+      } : null,
       responseKeys: Object.keys(response),
     });
 
