@@ -2,6 +2,8 @@ const { Op } = require("sequelize");
 const logger = require("../../config/logger");
 const { sequelize: db } = require("../../config/database");
 const tabarukatModel = require("../models/tabarukat")(db);
+const zoneModel = require("../models/zone")(db);
+const mehfilDirectoryModel = require("../models/mehfil-directories")(db);
 const { paginate, constructPagination } = require("./utilityServices");
 const { SearchFields } = require("../Enums/searchEnums");
 
@@ -108,13 +110,22 @@ exports.getTabarukat = async ({
   }
 };
 
-// Get Tabarukat by ID
+// Get Tabarukat by ID (with zone + mehfil for view page)
 exports.getTabarukatById = async (id) => {
   try {
     if (!id) {
       return { success: false, message: "Tabarukat not found" };
     }
-    const tabarukat = await tabarukatModel.findByPk(id);
+    const tabarukat = await tabarukatModel.findByPk(id, {
+      include: [
+        { model: zoneModel, attributes: ["id", "title_en"], required: false },
+        {
+          model: mehfilDirectoryModel,
+          attributes: ["id", "mehfil_number", "name_en"],
+          required: false,
+        },
+      ],
+    });
     if (!tabarukat) {
       return { success: false, message: "Tabarukat not found" };
     }

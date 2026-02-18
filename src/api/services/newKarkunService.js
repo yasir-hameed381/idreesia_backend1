@@ -36,6 +36,12 @@ exports.createKarkun = async ({
   }
 };
 
+const safeInt = (v) => {
+  if (v == null) return null;
+  const n = parseInt(String(v).trim(), 10);
+  return Number.isNaN(n) ? null : n;
+};
+
 // Get All Karkuns (with pagination + search)
 exports.getKarkuns = async ({
   page = 1,
@@ -43,52 +49,53 @@ exports.getKarkuns = async ({
   search = "",
   zone_id,
   mehfil_directory_id,
+  date_from,
+  date_to,
   requestUrl = "",
 }) => {
   try {
     const { offset, limit, currentPage } = await paginate({ page, size });
 
-    // Build conditions array for proper AND/OR combination
     const conditions = [];
 
-    // Add search conditions
-    if (search && search.trim()) {
-      const searchTerm = search.trim();
+    // Search
+    const searchStr = typeof search === "string" ? search.trim() : "";
+    if (searchStr) {
       const searchConditions = [
-        { name: { [Op.like]: `%${searchTerm}%` } },
-        { father_name: { [Op.like]: `%${searchTerm}%` } },
-        { marfat: { [Op.like]: `%${searchTerm}%` } },
-        { phone_number: { [Op.like]: `%${searchTerm}%` } },
+        { name: { [Op.like]: `%${searchStr}%` } },
+        { father_name: { [Op.like]: `%${searchStr}%` } },
+        { marfat: { [Op.like]: `%${searchStr}%` } },
+        { phone_number: { [Op.like]: `%${searchStr}%` } },
       ];
+      const searchNum = safeInt(searchStr);
+      if (searchNum != null) searchConditions.push({ id: searchNum });
+      conditions.push({ [Op.or]: searchConditions });
+    }
 
-      // Also try exact numeric match for ID if search term is a number
-      const searchNum = parseInt(searchTerm);
-      if (!isNaN(searchNum)) {
-        searchConditions.push({ id: searchNum });
+    const zoneIdNum = safeInt(zone_id);
+    if (zoneIdNum != null) conditions.push({ zone_id: zoneIdNum });
+
+    const mehfilIdNum = safeInt(mehfil_directory_id);
+    if (mehfilIdNum != null) conditions.push({ mehfil_directory_id: mehfilIdNum });
+
+    // Date filters on created_at (YYYY-MM-DD)
+    const df = typeof date_from === "string" ? date_from.trim() : "";
+    const dt = typeof date_to === "string" ? date_to.trim() : "";
+    if (df) {
+      const fromDate = new Date(df);
+      if (!Number.isNaN(fromDate.getTime())) {
+        fromDate.setHours(0, 0, 0, 0);
+        conditions.push({ created_at: { [Op.gte]: fromDate } });
       }
-
-      if (searchConditions.length > 0) {
-        conditions.push({ [Op.or]: searchConditions });
+    }
+    if (dt) {
+      const toDate = new Date(dt);
+      if (!Number.isNaN(toDate.getTime())) {
+        toDate.setHours(23, 59, 59, 999);
+        conditions.push({ created_at: { [Op.lte]: toDate } });
       }
     }
 
-    // Add zone filter
-    if (zone_id && zone_id.trim()) {
-      const zoneIdNum = parseInt(zone_id);
-      if (!isNaN(zoneIdNum)) {
-        conditions.push({ zone_id: zoneIdNum });
-      }
-    }
-
-    // Add mehfil directory filter
-    if (mehfil_directory_id && mehfil_directory_id.trim()) {
-      const mehfilIdNum = parseInt(mehfil_directory_id);
-      if (!isNaN(mehfilIdNum)) {
-        conditions.push({ mehfil_directory_id: mehfilIdNum });
-      }
-    }
-
-    // Build final where clause
     const where = conditions.length > 0 ? { [Op.and]: conditions } : {};
 
     const { count, rows: data } = await newKarkunModel.findAndCountAll({

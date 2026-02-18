@@ -71,16 +71,29 @@ exports.createMehfilReport = async (req, res, next) => {
 exports.getMehfilReports = async (req, res, next) => {
   try {
     const requestUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-    const { page, size, search, zone, month, year, mehfil_directory_id } = req.query;
+    const q = req.query;
+    const page = q.page ?? 1;
+    const size = q.size ?? q.per_page ?? 10;
+    const search = q.search ?? "";
+    const zone_id = q.zone_id ?? q.zone ?? null;
+    const report_year = q.report_year ?? q.year ?? null;
+    const report_month = q.report_month ?? q.month ?? null;
+    const mehfil_directory_id = q.mehfil_directory_id ?? null;
+    const region_id = q.region_id ?? null;
+    const sort_by = q.sort_by ?? "created_at";
+    const sort_direction = q.sort_direction ?? "desc";
 
     const result = await mehfilReportsService.getMehfilReports({
       page,
       size,
       search,
-      zone_id: zone,
-      report_month: month,
-      report_year: year,
+      zone_id,
+      report_month,
+      report_year,
       mehfil_directory_id,
+      region_id,
+      sort_by,
+      sort_direction,
       requestUrl,
     });
 

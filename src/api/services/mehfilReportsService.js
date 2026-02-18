@@ -2,6 +2,16 @@ const { Op } = require("sequelize");
 const { Sequelize } = require("sequelize");
 const { sequelize: db } = require("../../config/database");
 const mehfil_reports = require("../models/mehfilReports")(db);
+const zonesModel = require("../models/zone")(db);
+
+const SAFE_INT = (v) => {
+  if (v == null) return null;
+  const n = parseInt(String(v).trim(), 10);
+  return Number.isNaN(n) ? null : n;
+};
+
+const SORT_FIELDS = ["created_at", "coordinator_name"];
+const SORT_DIRECTIONS = ["asc", "desc"];
 
 // Create Mehfil Report
 exports.createMehfilReport = async (data) => {
@@ -18,132 +28,121 @@ exports.getMehfilReports = async ({
   report_month,
   report_year,
   mehfil_directory_id,
+  region_id,
+  sort_by = "created_at",
+  sort_direction = "desc",
   requestUrl,
 }) => {
-  const limit = parseInt(size) || 10;
-  const offset = (parseInt(page) - 1) * limit;
+  const limit = Math.max(1, parseInt(size, 10) || 10);
+  const offset = (Math.max(1, parseInt(page, 10) || 1) - 1) * limit;
 
-  // Build where clause conditions
   const conditions = [];
 
-  // Search filter - create OR conditions for search
-  if (search && search.trim()) {
-    const searchTerm = search.trim();
-    const searchConditions = [];
-    
-    // Text search on coordinator_name
-    searchConditions.push({
-      coordinator_name: { [Op.like]: `%${searchTerm}%` }
-    });
-    
-    // Search in numeric fields by casting to string
-    // This allows partial matches like "202" matching "2024"
-    searchConditions.push(
+  // Search filter
+  const searchStr = typeof search === "string" ? search.trim() : "";
+  if (searchStr) {
+    const searchConditions = [
+      { coordinator_name: { [Op.like]: `%${searchStr}%` } },
       Sequelize.where(
-        Sequelize.cast(Sequelize.col('mehfil_reports.report_month'), 'CHAR'),
-        { [Op.like]: `%${searchTerm}%` }
-      )
-    );
-    searchConditions.push(
+        Sequelize.cast(Sequelize.col("mehfil_reports.report_month"), "CHAR"),
+        { [Op.like]: `%${searchStr}%` }
+      ),
       Sequelize.where(
-        Sequelize.cast(Sequelize.col('mehfil_reports.report_year'), 'CHAR'),
-        { [Op.like]: `%${searchTerm}%` }
-      )
-    );
-    searchConditions.push(
+        Sequelize.cast(Sequelize.col("mehfil_reports.report_year"), "CHAR"),
+        { [Op.like]: `%${searchStr}%` }
+      ),
       Sequelize.where(
-        Sequelize.cast(Sequelize.col('mehfil_reports.zone_id'), 'CHAR'),
-        { [Op.like]: `%${searchTerm}%` }
-      )
-    );
-    searchConditions.push(
+        Sequelize.cast(Sequelize.col("mehfil_reports.zone_id"), "CHAR"),
+        { [Op.like]: `%${searchStr}%` }
+      ),
       Sequelize.where(
-        Sequelize.cast(Sequelize.col('mehfil_reports.mehfil_directory_id'), 'CHAR'),
-        { [Op.like]: `%${searchTerm}%` }
-      )
-    );
-    
-    // Also try exact numeric match if search term is a number
-    const searchNum = parseInt(searchTerm);
-    if (!isNaN(searchNum)) {
+        Sequelize.cast(Sequelize.col("mehfil_reports.mehfil_directory_id"), "CHAR"),
+        { [Op.like]: `%${searchStr}%` }
+      ),
+    ];
+    const searchNum = SAFE_INT(searchStr);
+    if (searchNum != null) {
       searchConditions.push({ report_month: searchNum });
       searchConditions.push({ report_year: searchNum });
       searchConditions.push({ zone_id: searchNum });
       searchConditions.push({ mehfil_directory_id: searchNum });
     }
-    
-    // Try to match month names
     const monthNames = [
-      'january', 'february', 'march', 'april', 'may', 'june',
-      'july', 'august', 'september', 'october', 'november', 'december'
+      "january", "february", "march", "april", "may", "june",
+      "july", "august", "september", "october", "november", "december",
     ];
-    const monthIndex = monthNames.findIndex(m => 
-      m.toLowerCase().includes(searchTerm.toLowerCase())
+    const mi = monthNames.findIndex((m) =>
+      m.toLowerCase().includes(searchStr.toLowerCase())
     );
-    if (monthIndex >= 0) {
-      searchConditions.push({ report_month: monthIndex + 1 });
-    }
-    
-    if (searchConditions.length > 0) {
-      conditions.push({ [Op.or]: searchConditions });
+    if (mi >= 0) searchConditions.push({ report_month: mi + 1 });
+    conditions.push({ [Op.or]: searchConditions });
+  }
+
+  // Region filter: restrict to zones in region
+  if (SAFE_INT(region_id) != null) {
+    const regionIdNum = SAFE_INT(region_id);
+    const zoneRows = await zonesModel.findAll({
+      where: { region_id: regionIdNum },
+      attributes: ["id"],
+    });
+    const zoneIds = zoneRows.map((z) => z.id);
+    if (zoneIds.length) {
+      conditions.push({ zone_id: { [Op.in]: zoneIds } });
+    } else {
+      conditions.push({ id: 0 });
     }
   }
 
   // Zone filter
-  if (zone_id && zone_id.trim()) {
-    const zoneIdNum = parseInt(zone_id);
-    if (!isNaN(zoneIdNum)) {
-      conditions.push({ zone_id: zoneIdNum });
-    }
+  const zoneIdNum = SAFE_INT(zone_id);
+  if (zoneIdNum != null) {
+    conditions.push({ zone_id: zoneIdNum });
   }
 
   // Month filter
-  if (report_month && report_month.trim()) {
-    const monthNum = parseInt(report_month);
-    if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
-      conditions.push({ report_month: monthNum });
-    }
+  const monthNum = SAFE_INT(report_month);
+  if (monthNum != null && monthNum >= 1 && monthNum <= 12) {
+    conditions.push({ report_month: monthNum });
   }
 
   // Year filter
-  if (report_year && report_year.trim()) {
-    const yearNum = parseInt(report_year);
-    if (!isNaN(yearNum)) {
-      conditions.push({ report_year: yearNum });
-    }
+  const yearNum = SAFE_INT(report_year);
+  if (yearNum != null) {
+    conditions.push({ report_year: yearNum });
   }
 
   // Mehfil directory filter
-  if (mehfil_directory_id && mehfil_directory_id.trim()) {
-    const mehfilId = parseInt(mehfil_directory_id);
-    if (!isNaN(mehfilId)) {
-      conditions.push({ mehfil_directory_id: mehfilId });
-    }
+  const mehfilIdNum = SAFE_INT(mehfil_directory_id);
+  if (mehfilIdNum != null) {
+    conditions.push({ mehfil_directory_id: mehfilIdNum });
   }
 
-  // Combine all conditions with AND
-  // If only one condition, use it directly; otherwise wrap in Op.and
   let whereClause = {};
-  if (conditions.length === 1) {
-    whereClause = conditions[0];
-  } else if (conditions.length > 1) {
-    whereClause = { [Op.and]: conditions };
-  }
+  if (conditions.length === 1) whereClause = conditions[0];
+  else if (conditions.length > 1) whereClause = { [Op.and]: conditions };
+
+  const orderField = SORT_FIELDS.includes(String(sort_by).toLowerCase())
+    ? String(sort_by)
+    : "created_at";
+  const orderDir = SORT_DIRECTIONS.includes(String(sort_direction).toLowerCase())
+    ? String(sort_direction).toUpperCase()
+    : "DESC";
 
   const { count, rows } = await mehfil_reports.findAndCountAll({
     where: whereClause,
     limit,
     offset,
-    order: [["created_at", "DESC"]],
+    order: [[orderField, orderDir]],
   });
 
-  const totalPages = Math.ceil(count / limit);
+  const totalPages = Math.ceil(count / limit) || 1;
+  const currentPage = Math.max(1, parseInt(page, 10) || 1);
 
   return {
     data: rows,
     meta: {
       total: count,
-      current_page: parseInt(page),
+      current_page: currentPage,
       last_page: totalPages,
       per_page: limit,
     },
