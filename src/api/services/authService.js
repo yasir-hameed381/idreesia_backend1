@@ -106,13 +106,13 @@ exports.login = async (email, password, ipAddress = '127.0.0.1') => {
   }
 
   // Check if user is active (matching Laravel logic)
-  if (!user.is_active) {
-    // Increment rate limiter for inactive account
-    RateLimiter.hit(throttleKey, 1);
-    const error = new Error('Your account has been deactivated. Please contact your administrator.');
-    error.statusCode = 403;
-    throw error;
-  }
+  // if (!user.is_active) {
+  //   // Increment rate limiter for inactive account
+  //   RateLimiter.hit(throttleKey, 1);
+  //   const error = new Error('Your account has been deactivated. Please contact your administrator.');
+  //   error.statusCode = 403;
+  //   throw error;
+  // }
 
   // Clear rate limiter on successful login
   RateLimiter.clear(throttleKey);
